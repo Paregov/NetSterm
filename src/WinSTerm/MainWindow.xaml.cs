@@ -519,7 +519,7 @@ public partial class MainWindow : MetroWindow
         var files = e.Data.GetData(DataFormats.FileDrop) as string[];
         if (files == null || files.Length == 0) return;
 
-        string targetPath = "/";
+        string targetPath = ViewModel.SftpSidebar.CurrentPath ?? "/";
 
         if (e.OriginalSource is DependencyObject source)
         {
@@ -544,7 +544,7 @@ public partial class MainWindow : MetroWindow
 
     private async void SftpUploadHere_Click(object sender, RoutedEventArgs e)
     {
-        var targetPath = "/";
+        var targetPath = ViewModel.SftpSidebar.CurrentPath ?? "/";
         if (GetSftpNodeFromMenuItem(sender) is { IsDirectory: true } node)
             targetPath = node.FullPath;
 
