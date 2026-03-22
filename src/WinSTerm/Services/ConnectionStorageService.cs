@@ -1,5 +1,4 @@
 using System.IO;
-using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using WinSTerm.Models;
@@ -143,15 +142,11 @@ public class ConnectionStorageService : IConnectionStorageService
 
     public static string EncryptPassword(string plaintext)
     {
-        var bytes = System.Text.Encoding.UTF8.GetBytes(plaintext);
-        var encrypted = ProtectedData.Protect(bytes, null, DataProtectionScope.CurrentUser);
-        return Convert.ToBase64String(encrypted);
+        return EncryptionService.Encrypt(plaintext);
     }
 
     public static string DecryptPassword(string encrypted)
     {
-        var bytes = Convert.FromBase64String(encrypted);
-        var decrypted = ProtectedData.Unprotect(bytes, null, DataProtectionScope.CurrentUser);
-        return System.Text.Encoding.UTF8.GetString(decrypted);
+        return EncryptionService.Decrypt(encrypted);
     }
 }
