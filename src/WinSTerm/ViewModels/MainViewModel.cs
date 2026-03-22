@@ -1,7 +1,4 @@
 using System.ComponentModel;
-using System.IO;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
@@ -12,7 +9,7 @@ namespace WinSTerm.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
-    private readonly ConnectionStorageService _storage = new();
+    internal readonly ConnectionStorageService _storage = new();
 
     // Session tree (left sidebar)
     public ObservableCollection<SessionTreeItem> SessionTree { get; } = new();
@@ -376,160 +373,6 @@ public partial class MainViewModel : ObservableObject
     public void CancelFolderRename(SessionTreeItem item)
     {
         LoadSessionTree();
-    }
-
-    // ===== Export / Import =====
-
-    private static readonly JsonSerializerOptions s_exportJsonOptions = new()
-    {
-        WriteIndented = true,
-        Converters = { new JsonStringEnumConverter() }
-    };
-
-    public void ExportConnections(string filePath)
-    {
-        if (string.IsNullOrWhiteSpace(filePath))
-            throw new ArgumentException("File path cannot be empty.", nameof(filePath));
-
-        var store = _storage.Store;
-
-        var exportData = new ExportData
-        {
-            Version = "1.0",
-            ExportedAt = DateTime.UtcNow,
-            Folders = store.Folders.Select(CloneFolder).ToList(),
-            Connections = store.Connections.Select(CloneConnectionWithoutPassword).ToList()
-        };
-
-        var json = JsonSerializer.Serialize(exportData, s_exportJsonOptions);
-        File.WriteAllText(filePath, json);
-    }
-
-    public (int connections, int folders) ImportConnections(string filePath)
-    {
-        if (string.IsNullOrWhiteSpace(filePath))
-            throw new ArgumentException("File path cannot be empty.", nameof(filePath));
-
-        if (!File.Exists(filePath))
-            throw new FileNotFoundException("Import file not found.", filePath);
-
-        var json = File.ReadAllText(filePath);
-        var importData = JsonSerializer.Deserialize<ExportData>(json, s_exportJsonOptions);
-
-        if (importData == null)
-            throw new InvalidOperationException("Failed to parse the import file.");
-
-        var store = _storage.Store;
-
-        // Build old ID to new ID map for folders
-        var folderIdMap = new Dictionary<string, string>();
-        int foldersAdded = 0;
-
-        foreach (var importedFolder in importData.Folders)
-        {
-            var parentId = RemapFolderId(importedFolder.ParentFolderId, folderIdMap);
-            var existing = store.Folders.FirstOrDefault(f =>
-                f.Name == importedFolder.Name && f.ParentFolderId == parentId);
-
-            if (existing != null)
-            {
-                folderIdMap[importedFolder.Id] = existing.Id;
-                continue;
-            }
-
-            var newId = Guid.NewGuid().ToString();
-            folderIdMap[importedFolder.Id] = newId;
-
-            var newFolder = new ConnectionFolder
-            {
-                Id = newId,
-                Name = importedFolder.Name,
-                ParentFolderId = parentId,
-                IsExpanded = importedFolder.IsExpanded
-            };
-
-            store.Folders.Add(newFolder);
-            foldersAdded++;
-        }
-
-        // Import connections, skip duplicates
-        int connectionsAdded = 0;
-
-        foreach (var importedConn in importData.Connections)
-        {
-            var remappedFolderId = RemapFolderId(importedConn.FolderId, folderIdMap);
-
-            var isDuplicate = store.Connections.Any(c =>
-                c.Host == importedConn.Host
-                && c.Port == importedConn.Port
-                && c.Username == importedConn.Username
-                && c.FolderId == remappedFolderId);
-
-            if (isDuplicate)
-                continue;
-
-            var newConn = CloneConnectionWithoutPassword(importedConn);
-            newConn.Id = Guid.NewGuid().ToString();
-            newConn.FolderId = remappedFolderId;
-            newConn.CreatedAt = DateTime.UtcNow;
-            newConn.LastConnectedAt = default;
-
-            store.Connections.Add(newConn);
-            connectionsAdded++;
-        }
-
-        if (foldersAdded > 0 || connectionsAdded > 0)
-            _storage.Save();
-
-        LoadSessionTree();
-        return (connectionsAdded, foldersAdded);
-    }
-
-    private static string? RemapFolderId(string? oldId, Dictionary<string, string> folderIdMap)
-    {
-        if (oldId == null) return null;
-        return folderIdMap.TryGetValue(oldId, out var newId) ? newId : null;
-    }
-
-    private static ConnectionFolder CloneFolder(ConnectionFolder source)
-    {
-        return new ConnectionFolder
-        {
-            Id = source.Id,
-            Name = source.Name,
-            ParentFolderId = source.ParentFolderId,
-            IsExpanded = source.IsExpanded
-        };
-    }
-
-    private static ConnectionInfo CloneConnectionWithoutPassword(ConnectionInfo source)
-    {
-        return new ConnectionInfo
-        {
-            Id = source.Id,
-            Name = source.Name,
-            Host = source.Host,
-            Port = source.Port,
-            Username = source.Username,
-            AuthMethod = source.AuthMethod,
-            PrivateKeyPath = source.PrivateKeyPath,
-            FolderId = source.FolderId,
-            EncryptedPassword = null, // DPAPI is machine-specific; cannot be ported
-            CreatedAt = source.CreatedAt,
-            LastConnectedAt = source.LastConnectedAt,
-            TerminalType = source.TerminalType,
-            StartupCommand = source.StartupCommand,
-            RemoteDirectory = source.RemoteDirectory,
-            KeepAliveInterval = source.KeepAliveInterval,
-            EnableCompression = source.EnableCompression,
-            JumpHost = source.JumpHost,
-            JumpPort = source.JumpPort,
-            JumpUsername = source.JumpUsername,
-            ProxyType = source.ProxyType,
-            ProxyHost = source.ProxyHost,
-            ProxyPort = source.ProxyPort,
-            Description = source.Description
-        };
     }
 
     private SessionTreeItem? FindTreeItem(string id)

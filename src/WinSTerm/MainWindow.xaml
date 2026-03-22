@@ -77,12 +77,12 @@
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator/>
-                <MenuItem Header="_Export Connections..." Click="ExportConnections_Click">
+                <MenuItem Header="_Export Configuration..." Click="ExportConfig_Click">
                     <MenuItem.Icon>
                         <iconPacks:PackIconMaterial Kind="Export" Width="14" Height="14"/>
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="_Import Connections..." Click="ImportConnections_Click">
+                <MenuItem Header="_Import Configuration..." Click="ImportConfig_Click">
                     <MenuItem.Icon>
                         <iconPacks:PackIconMaterial Kind="Import" Width="14" Height="14"/>
                     </MenuItem.Icon>

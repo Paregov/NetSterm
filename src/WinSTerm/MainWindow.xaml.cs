@@ -327,22 +327,30 @@ public partial class MainWindow : MetroWindow
         dialog.ShowDialog();
     }
 
-    private void ExportConnections_Click(object sender, RoutedEventArgs e)
+    private void ExportConfig_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new Microsoft.Win32.SaveFileDialog
+        var exportDialog = new ExportDialog { Owner = this };
+        if (exportDialog.ShowDialog() != true || exportDialog.Result == null)
+            return;
+
+        var saveDialog = new Microsoft.Win32.SaveFileDialog
         {
-            Filter = "WinSTerm Connections (*.winsterm)|*.winsterm|JSON Files (*.json)|*.json",
+            Filter = "WinSTerm Package (*.winsterm)|*.winsterm",
             DefaultExt = ".winsterm",
-            FileName = "winsterm-connections"
+            FileName = $"winsterm-export-{DateTime.Now:yyyyMMdd}"
         };
 
-        if (dialog.ShowDialog() != true) return;
+        if (saveDialog.ShowDialog() != true)
+            return;
 
         try
         {
-            ViewModel.ExportConnections(dialog.FileName);
+            var service = new ConfigurationExportService(
+                new ConnectionStorageService(), SnippetStorageService.Instance);
+            service.Export(saveDialog.FileName, exportDialog.Result);
+
             MessageBox.Show(
-                $"Connections exported successfully to:\n{dialog.FileName}",
+                $"Configuration exported successfully to:\n{saveDialog.FileName}",
                 "Export Complete",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
@@ -357,23 +365,42 @@ public partial class MainWindow : MetroWindow
         }
     }
 
-    private void ImportConnections_Click(object sender, RoutedEventArgs e)
+    private void ImportConfig_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Filter = "WinSTerm Connections (*.winsterm)|*.winsterm|JSON Files (*.json)|*.json"
+            Filter = "WinSTerm Package (*.winsterm)|*.winsterm"
         };
 
-        if (dialog.ShowDialog() != true) return;
+        if (dialog.ShowDialog() != true)
+            return;
 
         try
         {
-            var (connectionCount, folderCount) = ViewModel.ImportConnections(dialog.FileName);
-            MessageBox.Show(
-                $"Imported {connectionCount} connection(s) and {folderCount} folder(s).",
-                "Import Complete",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+            var service = new ConfigurationExportService(
+                ViewModel._storage, SnippetStorageService.Instance);
+            var result = service.Import(dialog.FileName);
+
+            ViewModel.LoadSessionTree();
+            ViewModel.SnippetsSidebar.LoadTree();
+
+            var summary = new List<string>();
+            if (result.ConnectionsAdded > 0)
+                summary.Add($"{result.ConnectionsAdded} connection(s)");
+            if (result.ConnectionFoldersAdded > 0)
+                summary.Add($"{result.ConnectionFoldersAdded} connection folder(s)");
+            if (result.SnippetsAdded > 0)
+                summary.Add($"{result.SnippetsAdded} snippet(s)");
+            if (result.SnippetFoldersAdded > 0)
+                summary.Add($"{result.SnippetFoldersAdded} snippet folder(s)");
+            if (result.PrivateKeysImported > 0)
+                summary.Add($"{result.PrivateKeysImported} private key(s)");
+
+            var msg = summary.Count > 0
+                ? $"Imported:\n{string.Join("\n", summary)}"
+                : "No new items to import (all duplicates).";
+
+            MessageBox.Show(msg, "Import Complete", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
