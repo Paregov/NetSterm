@@ -35,13 +35,53 @@ public class SshConnectionService : ISshConnectionService
 
             var connInfo = ConnectionFactory.Create(info, plainPassword, ConfigureKeyboardInteractive);
             _sshClient = new SshClient(connInfo);
-            _sshClient.Connect();
+
+            try
+            {
+                _sshClient.Connect();
+            }
+            catch (Renci.SshNet.Common.SshAuthenticationException)
+                when (plainPassword == null && LastAuthResponse == null)
+            {
+                // Auth failed and keyboard-interactive didn't trigger — the server
+                // likely only supports password auth.  Prompt in the terminal and retry.
+                _sshClient.Dispose();
+                _sshClient = null;
+
+                var capturedPassword = PromptPasswordInTerminal();
+                LastAuthResponse = capturedPassword;
+
+                var retryConn = ConnectionFactory.Create(info, capturedPassword);
+                _sshClient = new SshClient(retryConn);
+                _sshClient.Connect();
+            }
 
             _shellStream = _sshClient.CreateShellStream("xterm-256color", 80, 24, 800, 600, 4096);
 
             _readCts = new CancellationTokenSource();
             StartReadLoop(_readCts.Token);
         });
+    }
+
+    private string PromptPasswordInTerminal()
+    {
+        using var waitHandle = new ManualResetEventSlim(false);
+        _authResponseWait = waitHandle;
+        _authResponse = null;
+
+        AuthPromptReceived?.Invoke("Password: ", true);
+
+        try
+        {
+            if (!waitHandle.Wait(TimeSpan.FromSeconds(60)))
+                throw new TimeoutException("Password prompt timed out waiting for user input.");
+        }
+        finally
+        {
+            _authResponseWait = null;
+        }
+
+        return _authResponse ?? "";
     }
 
     private void ConfigureKeyboardInteractive(KeyboardInteractiveAuthenticationMethod kbdInteractive)
