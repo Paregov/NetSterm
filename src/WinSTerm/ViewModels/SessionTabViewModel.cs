@@ -52,10 +52,12 @@ public partial class SessionTabViewModel : ObservableObject, IDisposable
             }
             catch { /* SFTP is optional - don't fail the session */ }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            StatusText = $"Error: {ex.Message}";
+            StatusText = "Connection failed";
             IsConnected = false;
+            Disconnect();
+            throw; // Re-throw so callers can show error popup
         }
         finally
         {

@@ -187,7 +187,19 @@ public partial class MainWindow : MetroWindow
             }
         }
 
-        await tab.ConnectAsync(password);
+        try
+        {
+            await tab.ConnectAsync(password);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Failed to connect to {info.Host}:{info.Port}\n\n{ex.Message}",
+                "Connection Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            ViewModel.CloseTabCommand.Execute(tab);
+        }
     }
 
     private static SessionTreeItem? GetTreeItemFromMenuItem(object sender)
