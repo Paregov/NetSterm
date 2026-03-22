@@ -56,6 +56,8 @@ public partial class SessionTabViewModel : ObservableObject, IDisposable
                 var sftpPassword = password ?? SshService.LastAuthResponse;
                 await SftpService.ConnectAsync(ConnectionInfo, sftpPassword);
                 SftpBrowserViewModel.AttachService(SftpService);
+                // Re-notify so the SFTP sidebar picks up that SFTP is now connected
+                OnPropertyChanged(nameof(IsConnected));
             }
             catch { /* SFTP is optional - don't fail the session */ }
         }

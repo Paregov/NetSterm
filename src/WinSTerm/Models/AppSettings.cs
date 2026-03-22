@@ -16,6 +16,7 @@ public class AppSettings
 
     // Appearance
     public bool ShowStatusBar { get; set; } = true;
+    public bool ShowQuickConnect { get; set; } = true;
     public bool ConfirmOnCloseTab { get; set; }
     public bool ConfirmOnExit { get; set; } = true;
 
