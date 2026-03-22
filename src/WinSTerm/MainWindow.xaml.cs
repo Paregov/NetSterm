@@ -335,8 +335,8 @@ public partial class MainWindow : MetroWindow
 
         var saveDialog = new Microsoft.Win32.SaveFileDialog
         {
-            Filter = "WinSTerm Package (*.winsterm)|*.winsterm",
-            DefaultExt = ".winsterm",
+            Filter = "WinSTerm Package (*.zip)|*.zip",
+            DefaultExt = ".zip",
             FileName = $"winsterm-export-{DateTime.Now:yyyyMMdd}"
         };
 
@@ -369,7 +369,7 @@ public partial class MainWindow : MetroWindow
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Filter = "WinSTerm Package (*.winsterm)|*.winsterm"
+            Filter = "WinSTerm Package (*.zip)|*.zip"
         };
 
         if (dialog.ShowDialog() != true)
