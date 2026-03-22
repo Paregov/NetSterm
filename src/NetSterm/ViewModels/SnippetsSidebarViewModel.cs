@@ -72,6 +72,7 @@ public partial class SnippetsSidebarViewModel : ObservableObject
     public void AddSnippet(CommandSnippet snippet, string? folderId = null)
     {
         snippet.FolderId = folderId;
+        snippet.Name = GetUniqueSnippetName(snippet.Name, folderId);
         _storage.AddSnippet(snippet);
         LoadTree();
     }
@@ -90,7 +91,8 @@ public partial class SnippetsSidebarViewModel : ObservableObject
 
     public void AddFolderWithInPlaceEdit(string? parentFolderId)
     {
-        var folder = new SnippetFolder { Name = "New Folder", ParentFolderId = parentFolderId };
+        var name = GetUniqueSnippetName("New Folder", parentFolderId);
+        var folder = new SnippetFolder { Name = name, ParentFolderId = parentFolderId };
         _storage.AddFolder(folder);
         LoadTree();
 
@@ -114,7 +116,14 @@ public partial class SnippetsSidebarViewModel : ObservableObject
         var folder = _storage.Store.Folders.FirstOrDefault(f => f.Id == item.Id);
         if (folder == null) return;
 
-        folder.Name = item.Name.Trim();
+        var newName = item.Name.Trim();
+        if (IsDuplicateSnippetName(newName, folder.ParentFolderId, folder.Id))
+        {
+            item.Name = folder.Name;
+            return;
+        }
+
+        folder.Name = newName;
         _storage.Save();
     }
 
@@ -135,6 +144,39 @@ public partial class SnippetsSidebarViewModel : ObservableObject
     public void ExecuteSnippet(CommandSnippet snippet)
     {
         SnippetExecuteRequested?.Invoke(snippet.Command);
+    }
+
+    private bool IsDuplicateSnippetName(string name, string? folderId, string? excludeId = null)
+    {
+        var trimmedName = name.Trim();
+
+        var folders = _storage.Store.Folders
+            .Where(f => f.ParentFolderId == folderId && f.Id != excludeId);
+        if (folders.Any(f => string.Equals(f.Name, trimmedName, StringComparison.OrdinalIgnoreCase)))
+            return true;
+
+        var snippets = _storage.Store.Snippets
+            .Where(s => s.FolderId == folderId && s.Id != excludeId);
+        if (snippets.Any(s => string.Equals(s.Name, trimmedName, StringComparison.OrdinalIgnoreCase)))
+            return true;
+
+        return false;
+    }
+
+    private string GetUniqueSnippetName(string baseName, string? folderId, string? excludeId = null)
+    {
+        var name = baseName.Trim();
+        if (!IsDuplicateSnippetName(name, folderId, excludeId))
+            return name;
+
+        for (int i = 2; i < 1000; i++)
+        {
+            var candidate = $"{name} ({i})";
+            if (!IsDuplicateSnippetName(candidate, folderId, excludeId))
+                return candidate;
+        }
+
+        return name;
     }
 
     private SnippetTreeItem? FindTreeItem(string id)

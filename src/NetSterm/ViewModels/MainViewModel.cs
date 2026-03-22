@@ -318,13 +318,16 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void AddFolder()
     {
-        var folder = new ConnectionFolder { Name = "New Folder" };
+        var name = GetUniqueSessionName("New Folder", null);
+        var folder = new ConnectionFolder { Name = name };
         _storage.AddFolder(folder);
         LoadSessionTree();
     }
 
     public void SaveConnection(ConnectionInfo info)
     {
+        info.Name = GetUniqueSessionName(info.Name, info.FolderId, info.Id);
+
         var existing = _storage.Store.Connections.FindIndex(c => c.Id == info.Id);
         if (existing >= 0)
             _storage.UpdateConnection(info);
@@ -346,7 +349,8 @@ public partial class MainViewModel : ObservableObject
 
     public void AddFolderWithInPlaceEdit(string? parentFolderId)
     {
-        var folder = new ConnectionFolder { Name = "New Folder", ParentFolderId = parentFolderId };
+        var name = GetUniqueSessionName("New Folder", parentFolderId);
+        var folder = new ConnectionFolder { Name = name, ParentFolderId = parentFolderId };
         _storage.AddFolder(folder);
         LoadSessionTree();
 
@@ -370,13 +374,53 @@ public partial class MainViewModel : ObservableObject
         var folder = _storage.Store.Folders.FirstOrDefault(f => f.Id == item.Id);
         if (folder == null) return;
 
-        folder.Name = item.Name.Trim();
+        var newName = item.Name.Trim();
+        if (IsDuplicateSessionName(newName, folder.ParentFolderId, folder.Id))
+        {
+            item.Name = folder.Name;
+            return;
+        }
+
+        folder.Name = newName;
         _storage.Save();
     }
 
     public void CancelFolderRename(SessionTreeItem item)
     {
         LoadSessionTree();
+    }
+
+    private bool IsDuplicateSessionName(string name, string? folderId, string? excludeId = null)
+    {
+        var trimmedName = name.Trim();
+
+        var folders = _storage.Store.Folders
+            .Where(f => f.ParentFolderId == folderId && f.Id != excludeId);
+        if (folders.Any(f => string.Equals(f.Name, trimmedName, StringComparison.OrdinalIgnoreCase)))
+            return true;
+
+        var connections = _storage.Store.Connections
+            .Where(c => c.FolderId == folderId && c.Id != excludeId);
+        if (connections.Any(c => string.Equals(c.Name, trimmedName, StringComparison.OrdinalIgnoreCase)))
+            return true;
+
+        return false;
+    }
+
+    private string GetUniqueSessionName(string baseName, string? folderId, string? excludeId = null)
+    {
+        var name = baseName.Trim();
+        if (!IsDuplicateSessionName(name, folderId, excludeId))
+            return name;
+
+        for (int i = 2; i < 1000; i++)
+        {
+            var candidate = $"{name} ({i})";
+            if (!IsDuplicateSessionName(candidate, folderId, excludeId))
+                return candidate;
+        }
+
+        return name;
     }
 
     private SessionTreeItem? FindTreeItem(string id)
