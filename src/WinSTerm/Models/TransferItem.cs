@@ -26,4 +26,7 @@ public class TransferItem : CommunityToolkit.Mvvm.ComponentModel.ObservableObjec
     }
 
     public double ProgressPercent => TotalBytes > 0 ? (double)TransferredBytes / TotalBytes * 100 : 0;
+
+    public bool IsUpload => Direction == TransferDirection.Upload;
+    public bool IsDownload => Direction == TransferDirection.Download;
 }
