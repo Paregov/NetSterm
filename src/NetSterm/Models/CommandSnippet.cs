@@ -8,4 +8,5 @@ public class CommandSnippet
     public string? Description { get; set; }
     public string? FolderId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public int SortOrder { get; set; }
 }

@@ -291,7 +291,11 @@
                                       ItemsSource="{Binding SessionTree}"
                                       Background="Transparent" BorderThickness="0"
                                       Padding="4"
-                                      DoubleTapped="SessionTree_DoubleTapped">
+                                      DoubleTapped="SessionTree_DoubleTapped"
+                                      KeyDown="SessionTreeView_KeyDown"
+                                      DragDrop.AllowDrop="True"
+                                      DragDrop.DragOver="SessionTree_DragOver"
+                                      DragDrop.Drop="SessionTree_Drop">
                                 <TreeView.ContextMenu>
                                     <ContextMenu>
                                         <MenuItem Header="New Connection" Click="NewConnectionFromTree_Click">
@@ -309,7 +313,8 @@
                                 <TreeView.DataTemplates>
                                     <TreeDataTemplate DataType="vm:SessionTreeItem"
                                                       ItemsSource="{Binding Children}">
-                                        <StackPanel Orientation="Horizontal" Margin="2">
+                                        <StackPanel Orientation="Horizontal" Margin="2"
+                                                    PointerPressed="SessionTreeItem_PointerPressed">
                                             <StackPanel.ContextMenu>
                                                 <ContextMenu>
                                                     <!-- Connection-only: Connect -->
@@ -334,9 +339,8 @@
                                                         </MenuItem.Icon>
                                                     </MenuItem>
                                                     <Separator/>
-                                                    <!-- Folder-only: Rename -->
-                                                    <MenuItem Header="Rename" Click="RenameItem_Click"
-                                                              IsVisible="{Binding IsFolder}">
+                                                    <!-- Rename -->
+                                                    <MenuItem Header="Rename" Click="RenameItem_Click">
                                                         <MenuItem.Icon>
                                                             <mi:MaterialIcon Kind="Pencil" Width="14" Height="14"/>
                                                         </MenuItem.Icon>
@@ -532,7 +536,11 @@
                                       ItemsSource="{Binding SnippetsSidebar.SnippetTree}"
                                       Background="Transparent" BorderThickness="0"
                                       Padding="4"
-                                      DoubleTapped="SnippetTree_DoubleTapped">
+                                      DoubleTapped="SnippetTree_DoubleTapped"
+                                      KeyDown="SnippetTreeView_KeyDown"
+                                      DragDrop.AllowDrop="True"
+                                      DragDrop.DragOver="SnippetTree_DragOver"
+                                      DragDrop.Drop="SnippetTree_Drop">
                                 <TreeView.ContextMenu>
                                     <ContextMenu>
                                         <MenuItem Header="New Snippet" Click="AddSnippetFromTree_Click">
@@ -550,7 +558,8 @@
                                 <TreeView.DataTemplates>
                                     <TreeDataTemplate DataType="vm:SnippetTreeItem"
                                                       ItemsSource="{Binding Children}">
-                                        <StackPanel Orientation="Horizontal" Margin="2">
+                                        <StackPanel Orientation="Horizontal" Margin="2"
+                                                    PointerPressed="SnippetTreeItem_PointerPressed">
                                             <StackPanel.ContextMenu>
                                                 <ContextMenu>
                                                     <!-- Snippet-only: Execute -->
@@ -575,9 +584,8 @@
                                                         </MenuItem.Icon>
                                                     </MenuItem>
                                                     <Separator/>
-                                                    <!-- Folder-only: Rename -->
-                                                    <MenuItem Header="Rename" Click="RenameSnippetFolder_Click"
-                                                              IsVisible="{Binding IsFolder}">
+                                                    <!-- Rename -->
+                                                    <MenuItem Header="Rename" Click="RenameSnippetFolder_Click">
                                                         <MenuItem.Icon>
                                                             <mi:MaterialIcon Kind="Pencil" Width="14" Height="14"/>
                                                         </MenuItem.Icon>

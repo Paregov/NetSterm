@@ -6,4 +6,5 @@ public class ConnectionFolder
     public string Name { get; set; } = "";
     public string? ParentFolderId { get; set; }
     public bool IsExpanded { get; set; } = true;
+    public int SortOrder { get; set; }
 }

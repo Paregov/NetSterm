@@ -39,4 +39,7 @@ public class ConnectionInfo
 
     // Metadata
     public string? Description { get; set; }
+
+    // Ordering
+    public int SortOrder { get; set; }
 }

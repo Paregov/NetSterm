@@ -86,6 +86,24 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void SessionTreeView_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (SessionTreeView.SelectedItem is not SessionTreeItem item) return;
+
+        if (e.Key == Key.F2)
+        {
+            item.IsEditing = true;
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Delete)
+        {
+            var confirmed = await ShowConfirmAsync("Confirm Delete", $"Delete '{item.Name}'?");
+            if (confirmed)
+                ViewModel.DeleteItemCommand.Execute(item);
+            e.Handled = true;
+        }
+    }
+
     private async void NewConnection_Click(object? sender, RoutedEventArgs e)
     {
         var dialog = new ConnectionDialog();
@@ -171,7 +189,7 @@ public partial class MainWindow : Window
 
     private void RenameItem_Click(object? sender, RoutedEventArgs e)
     {
-        if (GetTreeItemFromMenuItem(sender) is { IsFolder: true } item)
+        if (GetTreeItemFromMenuItem(sender) is { } item)
         {
             item.IsEditing = true;
         }
@@ -190,19 +208,34 @@ public partial class MainWindow : Window
     {
         if (sender is TextBox { DataContext: SessionTreeItem item } && item.IsEditing)
         {
+            if (!ViewModel.CommitRename(item))
+            {
+                ViewModel.CancelFolderRename(item);
+            }
             item.IsEditing = false;
-            ViewModel.CommitFolderRename(item);
         }
     }
 
     private void TreeItemTextBox_KeyDown(object? sender, KeyEventArgs e)
     {
-        if (sender is not TextBox { DataContext: SessionTreeItem item }) return;
+        if (sender is not TextBox { DataContext: SessionTreeItem item } tb) return;
 
         if (e.Key == Key.Enter)
         {
-            item.IsEditing = false;
-            ViewModel.CommitFolderRename(item);
+            if (ViewModel.CommitRename(item))
+            {
+                item.IsEditing = false;
+            }
+            else
+            {
+                ToolTip.SetTip(tb, "This name is already used at this level");
+                ToolTip.SetIsOpen(tb, true);
+                tb.SelectAll();
+
+                var timer = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+                timer.Tick += (s, _) => { ToolTip.SetIsOpen(tb, false); timer.Stop(); };
+                timer.Start();
+            }
             e.Handled = true;
         }
         else if (e.Key == Key.Escape)
@@ -655,6 +688,144 @@ public partial class MainWindow : Window
         return null;
     }
 
+    // ===== Session Tree Drag-and-Drop =====
+
+#pragma warning disable CS0618 // Using legacy DragDrop API for compatibility
+    private async void SessionTreeItem_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Control { DataContext: SessionTreeItem item } control) return;
+        if (!e.GetCurrentPoint(control).Properties.IsLeftButtonPressed) return;
+
+        var dragData = new DataObject();
+        dragData.Set("SessionTreeItem", item);
+        await DragDrop.DoDragDrop(e, dragData, DragDropEffects.Move);
+    }
+
+    private void SessionTree_DragOver(object? sender, DragEventArgs e)
+    {
+        if (!e.Data.Contains("SessionTreeItem"))
+        {
+            e.DragEffects = DragDropEffects.None;
+        }
+        else
+        {
+            e.DragEffects = DragDropEffects.Move;
+        }
+        e.Handled = true;
+    }
+
+    private void SessionTree_Drop(object? sender, DragEventArgs e)
+    {
+        if (!e.Data.Contains("SessionTreeItem")) return;
+        var draggedItem = e.Data.Get("SessionTreeItem") as SessionTreeItem;
+        if (draggedItem == null) return;
+
+        var targetItem = FindTargetTreeItem<SessionTreeItem>(e);
+
+        if (targetItem == draggedItem) return;
+        if (draggedItem.IsFolder && IsSessionDescendant(draggedItem, targetItem)) return;
+
+        string? newParentFolderId = null;
+        if (targetItem != null)
+        {
+            if (targetItem.IsFolder)
+                newParentFolderId = targetItem.Id;
+            else
+                newParentFolderId = targetItem.ConnectionInfo?.FolderId;
+        }
+
+        ViewModel.MoveSessionItem(draggedItem, newParentFolderId);
+        e.Handled = true;
+    }
+
+    // ===== Snippet Tree Drag-and-Drop =====
+
+    private async void SnippetTreeItem_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Control { DataContext: SnippetTreeItem item } control) return;
+        if (!e.GetCurrentPoint(control).Properties.IsLeftButtonPressed) return;
+
+        var dragData = new DataObject();
+        dragData.Set("SnippetTreeItem", item);
+        await DragDrop.DoDragDrop(e, dragData, DragDropEffects.Move);
+    }
+
+    private void SnippetTree_DragOver(object? sender, DragEventArgs e)
+    {
+        if (!e.Data.Contains("SnippetTreeItem"))
+        {
+            e.DragEffects = DragDropEffects.None;
+        }
+        else
+        {
+            e.DragEffects = DragDropEffects.Move;
+        }
+        e.Handled = true;
+    }
+
+    private void SnippetTree_Drop(object? sender, DragEventArgs e)
+    {
+        if (!e.Data.Contains("SnippetTreeItem")) return;
+        var draggedItem = e.Data.Get("SnippetTreeItem") as SnippetTreeItem;
+        if (draggedItem == null) return;
+
+        var targetItem = FindTargetTreeItem<SnippetTreeItem>(e);
+
+        if (targetItem == draggedItem) return;
+        if (draggedItem.IsFolder && IsSnippetDescendant(draggedItem, targetItem)) return;
+
+        string? newParentFolderId = null;
+        if (targetItem != null)
+        {
+            if (targetItem.IsFolder)
+                newParentFolderId = targetItem.Id;
+            else
+                newParentFolderId = targetItem.Snippet?.FolderId;
+        }
+
+        ViewModel.SnippetsSidebar.MoveSnippetItem(draggedItem, newParentFolderId);
+        e.Handled = true;
+    }
+#pragma warning restore CS0618
+
+    // ===== Drag-and-Drop Helpers =====
+
+    private static T? FindTargetTreeItem<T>(DragEventArgs e) where T : class
+    {
+        if (e.Source is not Control source) return null;
+
+        var current = source as Visual;
+        while (current != null)
+        {
+            if (current is Control { DataContext: T item })
+                return item;
+            current = current.GetVisualParent();
+        }
+        return null;
+    }
+
+    private static bool IsSessionDescendant(SessionTreeItem parent, SessionTreeItem? target)
+    {
+        if (target == null) return false;
+        foreach (var child in parent.Children)
+        {
+            if (child == target) return true;
+            if (IsSessionDescendant(child, target)) return true;
+        }
+        return false;
+    }
+
+    private static bool IsSnippetDescendant(SnippetTreeItem parent, SnippetTreeItem? target)
+    {
+        if (target == null) return false;
+        foreach (var child in parent.Children)
+        {
+            if (child == target) return true;
+            if (IsSnippetDescendant(child, target)) return true;
+        }
+        return false;
+    }
+
     // ===== Sidebar Tab Switching =====
 
     private void SessionsTab_Checked(object? sender, RoutedEventArgs e)
@@ -746,7 +917,7 @@ public partial class MainWindow : Window
 
     private void RenameSnippetFolder_Click(object? sender, RoutedEventArgs e)
     {
-        if (GetSnippetTreeItemFromMenuItem(sender) is { IsFolder: true } item)
+        if (GetSnippetTreeItemFromMenuItem(sender) is { } item)
         {
             item.IsEditing = true;
         }
@@ -773,6 +944,24 @@ public partial class MainWindow : Window
         var confirmed = await ShowConfirmAsync("Confirm Delete", $"Delete '{item.Name}'?");
         if (confirmed)
             ViewModel.SnippetsSidebar.DeleteItem(item);
+    }
+
+    private async void SnippetTreeView_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (SnippetTreeView.SelectedItem is not SnippetTreeItem item) return;
+
+        if (e.Key == Key.F2)
+        {
+            item.IsEditing = true;
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Delete)
+        {
+            var confirmed = await ShowConfirmAsync("Confirm Delete", $"Delete '{item.Name}'?");
+            if (confirmed)
+                ViewModel.SnippetsSidebar.DeleteItem(item);
+            e.Handled = true;
+        }
     }
 
     private void ExecuteSnippetTree_Click(object? sender, RoutedEventArgs e)
@@ -802,19 +991,34 @@ public partial class MainWindow : Window
     {
         if (sender is TextBox { DataContext: SnippetTreeItem item } && item.IsEditing)
         {
+            if (!ViewModel.SnippetsSidebar.CommitRename(item))
+            {
+                ViewModel.SnippetsSidebar.CancelFolderRename();
+            }
             item.IsEditing = false;
-            ViewModel.SnippetsSidebar.CommitFolderRename(item);
         }
     }
 
     private void SnippetFolderTextBox_KeyDown(object? sender, KeyEventArgs e)
     {
-        if (sender is not TextBox { DataContext: SnippetTreeItem item }) return;
+        if (sender is not TextBox { DataContext: SnippetTreeItem item } tb) return;
 
         if (e.Key == Key.Enter)
         {
-            item.IsEditing = false;
-            ViewModel.SnippetsSidebar.CommitFolderRename(item);
+            if (ViewModel.SnippetsSidebar.CommitRename(item))
+            {
+                item.IsEditing = false;
+            }
+            else
+            {
+                ToolTip.SetTip(tb, "This name is already used at this level");
+                ToolTip.SetIsOpen(tb, true);
+                tb.SelectAll();
+
+                var timer = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+                timer.Tick += (s, _) => { ToolTip.SetIsOpen(tb, false); timer.Stop(); };
+                timer.Start();
+            }
             e.Handled = true;
         }
         else if (e.Key == Key.Escape)

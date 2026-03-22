@@ -158,7 +158,7 @@ public partial class MainViewModel : ObservableObject
 
         // Add folders
         var folderMap = new Dictionary<string, SessionTreeItem>();
-        foreach (var folder in store.Folders)
+        foreach (var folder in store.Folders.OrderBy(f => f.SortOrder))
         {
             var item = new SessionTreeItem
             {
@@ -171,7 +171,7 @@ public partial class MainViewModel : ObservableObject
         }
 
         // Nest folders
-        foreach (var folder in store.Folders)
+        foreach (var folder in store.Folders.OrderBy(f => f.SortOrder))
         {
             if (folder.ParentFolderId != null && folderMap.ContainsKey(folder.ParentFolderId))
                 folderMap[folder.ParentFolderId].Children.Add(folderMap[folder.Id]);
@@ -180,7 +180,7 @@ public partial class MainViewModel : ObservableObject
         }
 
         // Add connections
-        foreach (var conn in store.Connections)
+        foreach (var conn in store.Connections.OrderBy(c => c.SortOrder))
         {
             var item = new SessionTreeItem
             {
@@ -347,6 +347,46 @@ public partial class MainViewModel : ObservableObject
         LoadSessionTree();
     }
 
+    public void MoveSessionItem(SessionTreeItem item, string? newParentFolderId)
+    {
+        if (item.IsFolder)
+        {
+            var folder = _storage.Store.Folders.FirstOrDefault(f => f.Id == item.Id);
+            if (folder == null) return;
+            if (folder.ParentFolderId == newParentFolderId) return;
+            folder.ParentFolderId = newParentFolderId;
+            ReassignSortOrders(newParentFolderId);
+            _storage.Save();
+        }
+        else if (item.ConnectionInfo != null)
+        {
+            var conn = _storage.Store.Connections.FirstOrDefault(c => c.Id == item.ConnectionInfo.Id);
+            if (conn == null) return;
+            if (conn.FolderId == newParentFolderId) return;
+            conn.FolderId = newParentFolderId;
+            ReassignSortOrders(newParentFolderId);
+            _storage.Save();
+        }
+        LoadSessionTree();
+    }
+
+    private void ReassignSortOrders(string? parentFolderId)
+    {
+        int order = 0;
+        foreach (var folder in _storage.Store.Folders
+            .Where(f => f.ParentFolderId == parentFolderId)
+            .OrderBy(f => f.SortOrder))
+        {
+            folder.SortOrder = order++;
+        }
+        foreach (var conn in _storage.Store.Connections
+            .Where(c => c.FolderId == parentFolderId)
+            .OrderBy(c => c.SortOrder))
+        {
+            conn.SortOrder = order++;
+        }
+    }
+
     public void AddFolderWithInPlaceEdit(string? parentFolderId)
     {
         var name = GetUniqueSessionName("New Folder", parentFolderId);
@@ -367,22 +407,45 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    public void CommitFolderRename(SessionTreeItem item)
+    public bool CommitRename(SessionTreeItem item)
     {
-        if (!item.IsFolder || string.IsNullOrWhiteSpace(item.Name)) return;
-
-        var folder = _storage.Store.Folders.FirstOrDefault(f => f.Id == item.Id);
-        if (folder == null) return;
-
         var newName = item.Name.Trim();
-        if (IsDuplicateSessionName(newName, folder.ParentFolderId, folder.Id))
+        if (string.IsNullOrWhiteSpace(newName)) return false;
+
+        string? folderId;
+        string? excludeId;
+
+        if (item.IsFolder)
         {
-            item.Name = folder.Name;
-            return;
+            var folder = _storage.Store.Folders.FirstOrDefault(f => f.Id == item.Id);
+            if (folder == null) return false;
+            folderId = folder.ParentFolderId;
+            excludeId = folder.Id;
+        }
+        else
+        {
+            folderId = item.ConnectionInfo?.FolderId;
+            excludeId = item.ConnectionInfo?.Id;
         }
 
-        folder.Name = newName;
+        if (IsDuplicateSessionName(newName, folderId, excludeId))
+        {
+            return false;
+        }
+
+        if (item.IsFolder)
+        {
+            var folder = _storage.Store.Folders.First(f => f.Id == item.Id);
+            folder.Name = newName;
+        }
+        else if (item.ConnectionInfo != null)
+        {
+            var conn = _storage.Store.Connections.FirstOrDefault(c => c.Id == item.ConnectionInfo.Id);
+            if (conn != null) conn.Name = newName;
+        }
+
         _storage.Save();
+        return true;
     }
 
     public void CancelFolderRename(SessionTreeItem item)

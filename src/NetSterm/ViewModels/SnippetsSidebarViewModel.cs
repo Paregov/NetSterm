@@ -27,7 +27,7 @@ public partial class SnippetsSidebarViewModel : ObservableObject
 
         // Build folder map
         var folderMap = new Dictionary<string, SnippetTreeItem>();
-        foreach (var folder in store.Folders)
+        foreach (var folder in store.Folders.OrderBy(f => f.SortOrder))
         {
             var item = new SnippetTreeItem
             {
@@ -40,7 +40,7 @@ public partial class SnippetsSidebarViewModel : ObservableObject
         }
 
         // Nest folders
-        foreach (var folder in store.Folders)
+        foreach (var folder in store.Folders.OrderBy(f => f.SortOrder))
         {
             if (folder.ParentFolderId != null && folderMap.ContainsKey(folder.ParentFolderId))
                 folderMap[folder.ParentFolderId].Children.Add(folderMap[folder.Id]);
@@ -49,7 +49,7 @@ public partial class SnippetsSidebarViewModel : ObservableObject
         }
 
         // Add snippets
-        foreach (var snippet in store.Snippets)
+        foreach (var snippet in store.Snippets.OrderBy(s => s.SortOrder))
         {
             var item = new SnippetTreeItem
             {
@@ -109,22 +109,45 @@ public partial class SnippetsSidebarViewModel : ObservableObject
         }
     }
 
-    public void CommitFolderRename(SnippetTreeItem item)
+    public bool CommitRename(SnippetTreeItem item)
     {
-        if (!item.IsFolder || string.IsNullOrWhiteSpace(item.Name)) return;
-
-        var folder = _storage.Store.Folders.FirstOrDefault(f => f.Id == item.Id);
-        if (folder == null) return;
-
         var newName = item.Name.Trim();
-        if (IsDuplicateSnippetName(newName, folder.ParentFolderId, folder.Id))
+        if (string.IsNullOrWhiteSpace(newName)) return false;
+
+        string? folderId;
+        string? excludeId;
+
+        if (item.IsFolder)
         {
-            item.Name = folder.Name;
-            return;
+            var folder = _storage.Store.Folders.FirstOrDefault(f => f.Id == item.Id);
+            if (folder == null) return false;
+            folderId = folder.ParentFolderId;
+            excludeId = folder.Id;
+        }
+        else
+        {
+            folderId = item.Snippet?.FolderId;
+            excludeId = item.Snippet?.Id;
         }
 
-        folder.Name = newName;
+        if (IsDuplicateSnippetName(newName, folderId, excludeId))
+        {
+            return false;
+        }
+
+        if (item.IsFolder)
+        {
+            var folder = _storage.Store.Folders.First(f => f.Id == item.Id);
+            folder.Name = newName;
+        }
+        else if (item.Snippet != null)
+        {
+            var snippet = _storage.Store.Snippets.FirstOrDefault(s => s.Id == item.Snippet.Id);
+            if (snippet != null) snippet.Name = newName;
+        }
+
         _storage.Save();
+        return true;
     }
 
     public void CancelFolderRename()
@@ -139,6 +162,46 @@ public partial class SnippetsSidebarViewModel : ObservableObject
         else
             _storage.DeleteSnippet(item.Id);
         LoadTree();
+    }
+
+    public void MoveSnippetItem(SnippetTreeItem item, string? newParentFolderId)
+    {
+        if (item.IsFolder)
+        {
+            var folder = _storage.Store.Folders.FirstOrDefault(f => f.Id == item.Id);
+            if (folder == null) return;
+            if (folder.ParentFolderId == newParentFolderId) return;
+            folder.ParentFolderId = newParentFolderId;
+            ReassignSortOrders(newParentFolderId);
+            _storage.Save();
+        }
+        else if (item.Snippet != null)
+        {
+            var snippet = _storage.Store.Snippets.FirstOrDefault(s => s.Id == item.Snippet.Id);
+            if (snippet == null) return;
+            if (snippet.FolderId == newParentFolderId) return;
+            snippet.FolderId = newParentFolderId;
+            ReassignSortOrders(newParentFolderId);
+            _storage.Save();
+        }
+        LoadTree();
+    }
+
+    private void ReassignSortOrders(string? parentFolderId)
+    {
+        int order = 0;
+        foreach (var folder in _storage.Store.Folders
+            .Where(f => f.ParentFolderId == parentFolderId)
+            .OrderBy(f => f.SortOrder))
+        {
+            folder.SortOrder = order++;
+        }
+        foreach (var snippet in _storage.Store.Snippets
+            .Where(s => s.FolderId == parentFolderId)
+            .OrderBy(s => s.SortOrder))
+        {
+            snippet.SortOrder = order++;
+        }
     }
 
     public void ExecuteSnippet(CommandSnippet snippet)
