@@ -10,8 +10,13 @@ namespace WinSTerm.ViewModels;
 
 public partial class ConnectionDialogViewModel : ObservableValidator
 {
+    // --- General tab ---
+
     [ObservableProperty]
     private string _name = "";
+
+    [ObservableProperty]
+    private string _description = "";
 
     [ObservableProperty]
     [Required(ErrorMessage = "Host is required")]
@@ -45,12 +50,64 @@ public partial class ConnectionDialogViewModel : ObservableValidator
     [ObservableProperty]
     private bool _isEditMode;
 
+    // --- Terminal tab ---
+
+    [ObservableProperty]
+    private string _terminalType = "xterm-256color";
+
+    [ObservableProperty]
+    private string _startupCommand = "";
+
+    [ObservableProperty]
+    private string _remoteDirectory = "";
+
+    // --- Network tab ---
+
+    [ObservableProperty]
+    private int _keepAliveInterval = 30;
+
+    [ObservableProperty]
+    private bool _enableCompression;
+
+    [ObservableProperty]
+    private string _jumpHost = "";
+
+    [ObservableProperty]
+    [Range(1, 65535)]
+    [NotifyDataErrorInfo]
+    private int _jumpPort = 22;
+
+    [ObservableProperty]
+    private string _jumpUsername = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsProxyEnabled))]
+    private ProxyType _selectedProxyType = ProxyType.None;
+
+    [ObservableProperty]
+    private string _proxyHost = "";
+
+    [ObservableProperty]
+    [Range(1, 65535)]
+    [NotifyDataErrorInfo]
+    private int _proxyPort = 1080;
+
     private readonly string _connectionId;
     private readonly DateTime _createdAt;
     private string? _folderId;
 
     public bool IsPasswordAuth => SelectedAuthMethod == AuthMethod.Password;
     public bool IsPrivateKeyAuth => SelectedAuthMethod != AuthMethod.Password;
+    public bool IsProxyEnabled => SelectedProxyType != ProxyType.None;
+
+    public List<string> TerminalTypes { get; } =
+    [
+        "xterm-256color",
+        "xterm",
+        "vt100",
+        "vt220",
+        "ansi"
+    ];
 
     public ConnectionInfo? Result { get; private set; }
 
@@ -64,7 +121,10 @@ public partial class ConnectionDialogViewModel : ObservableValidator
             _connectionId = existing.Id;
             _createdAt = existing.CreatedAt;
             _folderId = existing.FolderId;
+
+            // General
             Name = existing.Name;
+            Description = existing.Description ?? "";
             Host = existing.Host;
             Port = existing.Port;
             Username = existing.Username;
@@ -76,6 +136,21 @@ public partial class ConnectionDialogViewModel : ObservableValidator
                 try { Password = ConnectionStorageService.DecryptPassword(existing.EncryptedPassword); }
                 catch { Password = ""; }
             }
+
+            // Terminal
+            TerminalType = existing.TerminalType ?? "xterm-256color";
+            StartupCommand = existing.StartupCommand ?? "";
+            RemoteDirectory = existing.RemoteDirectory ?? "";
+
+            // Network
+            KeepAliveInterval = existing.KeepAliveInterval;
+            EnableCompression = existing.EnableCompression;
+            JumpHost = existing.JumpHost ?? "";
+            JumpPort = existing.JumpPort;
+            JumpUsername = existing.JumpUsername ?? "";
+            SelectedProxyType = existing.ProxyType;
+            ProxyHost = existing.ProxyHost ?? "";
+            ProxyPort = existing.ProxyPort;
         }
         else
         {
@@ -126,7 +201,25 @@ public partial class ConnectionDialogViewModel : ObservableValidator
                 ? ConnectionStorageService.EncryptPassword(Password)
                 : null,
             CreatedAt = _createdAt,
-            LastConnectedAt = default
+            LastConnectedAt = default,
+
+            // Terminal
+            TerminalType = TerminalType,
+            StartupCommand = NullIfEmpty(StartupCommand),
+            RemoteDirectory = NullIfEmpty(RemoteDirectory),
+
+            // Network
+            KeepAliveInterval = KeepAliveInterval,
+            EnableCompression = EnableCompression,
+            JumpHost = NullIfEmpty(JumpHost),
+            JumpPort = JumpPort,
+            JumpUsername = NullIfEmpty(JumpUsername),
+            ProxyType = SelectedProxyType,
+            ProxyHost = IsProxyEnabled ? NullIfEmpty(ProxyHost) : null,
+            ProxyPort = ProxyPort,
+
+            // Metadata
+            Description = NullIfEmpty(Description)
         };
 
         window.DialogResult = true;
@@ -138,5 +231,10 @@ public partial class ConnectionDialogViewModel : ObservableValidator
     {
         window.DialogResult = false;
         window.Close();
+    }
+
+    private static string? NullIfEmpty(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 }
