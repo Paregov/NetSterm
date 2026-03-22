@@ -23,6 +23,11 @@ public class AppSettings
     public string DefaultLocalDirectory { get; set; } = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
     public bool ShowHiddenFiles { get; set; }
 
+    // Security / Master Password
+    public bool IsMasterPasswordEnabled { get; set; }
+    public string? MasterPasswordHash { get; set; }
+    public string? MasterPasswordSalt { get; set; }
+
     public AppSettings Clone()
     {
         return new AppSettings
@@ -39,7 +44,10 @@ public class AppSettings
             ConfirmOnCloseTab = ConfirmOnCloseTab,
             ConfirmOnExit = ConfirmOnExit,
             DefaultLocalDirectory = DefaultLocalDirectory,
-            ShowHiddenFiles = ShowHiddenFiles
+            ShowHiddenFiles = ShowHiddenFiles,
+            IsMasterPasswordEnabled = IsMasterPasswordEnabled,
+            MasterPasswordHash = MasterPasswordHash,
+            MasterPasswordSalt = MasterPasswordSalt
         };
     }
 }

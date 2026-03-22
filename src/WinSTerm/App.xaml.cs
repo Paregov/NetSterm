@@ -1,6 +1,8 @@
 using System.Windows;
 using System.Windows.Threading;
 using ControlzEx.Theming;
+using WinSTerm.Services;
+using WinSTerm.Views;
 
 namespace WinSTerm;
 
@@ -13,6 +15,23 @@ public partial class App : Application
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+
+        if (MasterPasswordService.IsEnabled)
+        {
+            var dialog = new MasterPasswordDialog();
+            if (dialog.ShowDialog() != true || !dialog.IsUnlocked)
+            {
+                Shutdown();
+                return;
+            }
+        }
+        else
+        {
+            MasterPasswordService.UnlockWithoutPassword();
+        }
+
+        var mainWindow = new MainWindow();
+        mainWindow.Show();
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
