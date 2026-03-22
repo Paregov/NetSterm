@@ -10,7 +10,7 @@
         x:Class="NetSterm.MainWindow"
         x:CompileBindings="False"
         Title="NetSterm - SSH Terminal"
-        Icon="Assets/NetSterm.ico"
+        Icon="Assets/netsterm.ico"
         Width="1200" Height="800"
         WindowStartupLocation="CenterScreen">
 
