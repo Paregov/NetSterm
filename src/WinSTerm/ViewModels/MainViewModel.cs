@@ -19,6 +19,9 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty] private SessionTabViewModel? _selectedTab;
 
+    // Home tab state: true when the Home tab is active (no session tab selected)
+    [ObservableProperty] private bool _isHomeSelected = true;
+
     // SFTP sidebar
     public SftpSidebarViewModel SftpSidebar { get; } = new();
     [ObservableProperty] private bool _isSftpSidebarVisible;
@@ -43,7 +46,14 @@ public partial class MainViewModel : ObservableObject
             oldValue.PropertyChanged -= OnSelectedTabPropertyChanged;
 
         if (newValue != null)
+        {
             newValue.PropertyChanged += OnSelectedTabPropertyChanged;
+            IsHomeSelected = false;
+        }
+        else
+        {
+            IsHomeSelected = true;
+        }
 
         UpdateSftpSidebar();
     }
@@ -67,6 +77,12 @@ public partial class MainViewModel : ObservableObject
             if (SelectedTab == null)
                 IsSftpSidebarVisible = false;
         }
+    }
+
+    [RelayCommand]
+    private void SelectHome()
+    {
+        SelectedTab = null;
     }
 
     public void LoadSessionTree()
@@ -172,7 +188,7 @@ public partial class MainViewModel : ObservableObject
         Tabs.Remove(tab);
         ConnectionCount = Tabs.Count;
 
-        if (SelectedTab == tab)
+        if (SelectedTab == tab || SelectedTab == null)
             SelectedTab = Tabs.LastOrDefault();
 
         StatusMessage = "Ready";
@@ -180,6 +196,7 @@ public partial class MainViewModel : ObservableObject
 
     public void CloseOtherTabs(SessionTabViewModel tab)
     {
+        if (tab == null || !Tabs.Contains(tab)) return;
         var others = Tabs.Where(t => t != tab).ToList();
         foreach (var t in others)
         {
@@ -208,6 +225,7 @@ public partial class MainViewModel : ObservableObject
 
     public void CloseTabsToRight(SessionTabViewModel tab)
     {
+        if (tab == null) return;
         var index = Tabs.IndexOf(tab);
         if (index < 0) return;
 
@@ -225,6 +243,7 @@ public partial class MainViewModel : ObservableObject
 
     public void DuplicateTab(SessionTabViewModel tab)
     {
+        if (tab == null) return;
         var newTab = new SessionTabViewModel(tab.ConnectionInfo);
         Tabs.Add(newTab);
         SelectedTab = newTab;

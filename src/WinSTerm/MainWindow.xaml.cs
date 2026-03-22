@@ -12,12 +12,14 @@ namespace WinSTerm;
 
 public partial class MainWindow : MetroWindow
 {
-    private MainViewModel ViewModel => (MainViewModel)DataContext;
+    private readonly MainViewModel _viewModel;
+    private MainViewModel ViewModel => _viewModel;
 
     public MainWindow()
     {
         InitializeComponent();
-        DataContext = new MainViewModel();
+        _viewModel = new MainViewModel();
+        DataContext = _viewModel;
     }
 
     private async void SessionTree_MouseDoubleClick(object sender, MouseButtonEventArgs e)
@@ -99,8 +101,7 @@ public partial class MainWindow : MetroWindow
     {
         if (GetTreeItemFromMenuItem(sender) is { IsFolder: true } folder)
         {
-            var info = new ConnectionInfo { FolderId = folder.Id };
-            var dialog = new ConnectionDialog(info) { Owner = this };
+            var dialog = new ConnectionDialog() { Owner = this };
             if (dialog.ShowDialog() == true && dialog.Result != null)
             {
                 dialog.Result.FolderId = folder.Id;
@@ -227,6 +228,25 @@ public partial class MainWindow : MetroWindow
         NewConnection_Click(sender, e);
     }
 
+    private void HomeTab_Click(object sender, MouseButtonEventArgs e)
+    {
+        ViewModel.SelectHomeCommand.Execute(null);
+    }
+
+    private void SessionTab_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.DataContext is SessionTabViewModel tab)
+        {
+            ViewModel.SelectedTab = tab;
+        }
+    }
+
+    private void TabCloseButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.DataContext is SessionTabViewModel tab)
+            ViewModel.CloseTabCommand.Execute(tab);
+    }
+
     private void TabClose_Click(object sender, RoutedEventArgs e)
     {
         if (GetTabFromContextMenu(sender) is { } tab)
@@ -329,6 +349,7 @@ public partial class MainWindow : MetroWindow
         {
             try
             {
+                if (ViewModel.SftpSidebar == null) return;
                 await ViewModel.SftpSidebar.DownloadAndOpenAsync(node);
             }
             catch (Exception ex)

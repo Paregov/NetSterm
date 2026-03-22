@@ -24,6 +24,7 @@
         <converters:InverseNullToVisibilityConverter x:Key="NullToCollapsed"/>
         <converters:InverseBoolConverter x:Key="InverseBool"/>
         <converters:FileSizeConverter x:Key="FileSizeConverter"/>
+        <converters:EqualityConverter x:Key="EqualityConverter"/>
 
         <!-- Sidebar tab toggle style (RadioButton as flat tab) -->
         <Style x:Key="SidebarTabStyle" TargetType="RadioButton">
@@ -430,199 +431,232 @@
                           HorizontalAlignment="Center" VerticalAlignment="Stretch"
                           Background="{StaticResource SidebarBorder}"/>
 
-            <!-- Center: Tab Control -->
+            <!-- Center: Always-Visible Tab Bar + Content -->
             <Grid Grid.Column="2">
-                <!-- Welcome screen when no tabs are open -->
-                <Border Background="#1e1e1e"
-                        Visibility="{Binding SelectedTab, Converter={StaticResource NullToVis}}">
-                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                        <iconPacks:PackIconMaterial Kind="Console" Width="64" Height="64"
-                                                    Foreground="#333" HorizontalAlignment="Center"
-                                                    Margin="0,0,0,16"/>
-                        <TextBlock Text="WinSTerm" FontSize="28" FontWeight="Light"
-                                   Foreground="#555" HorizontalAlignment="Center"
-                                   Margin="0,0,0,8"/>
-                        <TextBlock Text="Enter a host above or double-click a session to connect"
-                                   FontSize="13" Foreground="#444" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Border>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-                <!-- Tab Control -->
-                <TabControl ItemsSource="{Binding Tabs}"
-                            SelectedItem="{Binding SelectedTab}"
-                            Background="Transparent"
-                            BorderThickness="0"
-                            Visibility="{Binding SelectedTab, Converter={StaticResource NullToCollapsed}}">
+                <!-- Always-visible tab strip -->
+                <Border Grid.Row="0"
+                        Background="{StaticResource ToolbarBackground}"
+                        BorderBrush="{StaticResource SidebarBorder}"
+                        BorderThickness="0,0,0,1">
+                    <DockPanel>
+                        <!-- "+" new tab button (docked right) -->
+                        <Button DockPanel.Dock="Right"
+                                Click="NewTabButton_Click"
+                                ToolTip="New Connection"
+                                Style="{StaticResource MahApps.Styles.Button.Chromeless}"
+                                Padding="6,4" Margin="2"
+                                VerticalAlignment="Center">
+                            <iconPacks:PackIconMaterial Kind="Plus" Width="12" Height="12"
+                                                        Foreground="{StaticResource AccentBlueBrush}"/>
+                        </Button>
 
-                    <!-- Custom TabControl template with "+" button -->
-                    <TabControl.Template>
-                        <ControlTemplate TargetType="TabControl">
-                            <Grid ClipToBounds="True" SnapsToDevicePixels="True"
-                                  KeyboardNavigation.TabNavigation="Local">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="*"/>
-                                </Grid.RowDefinitions>
-                                <!-- Tab header strip -->
-                                <Border Grid.Row="0"
-                                        Background="{StaticResource ToolbarBackground}"
-                                        BorderBrush="{StaticResource SidebarBorder}"
-                                        BorderThickness="0,0,0,1">
-                                    <DockPanel>
-                                        <!-- New tab button -->
-                                        <Button DockPanel.Dock="Right"
-                                                Click="NewTabButton_Click"
-                                                ToolTip="New Connection"
-                                                Style="{StaticResource MahApps.Styles.Button.Chromeless}"
-                                                Padding="6,4" Margin="2"
-                                                VerticalAlignment="Center">
-                                            <iconPacks:PackIconMaterial Kind="Plus" Width="12" Height="12"
-                                                                        Foreground="{StaticResource AccentBlueBrush}"/>
-                                        </Button>
-                                        <!-- Tab headers -->
-                                        <TabPanel x:Name="HeaderPanel"
-                                                  IsItemsHost="True"
-                                                  Panel.ZIndex="1"
-                                                  KeyboardNavigation.TabIndex="1"
-                                                  Margin="0,2,0,0"/>
-                                    </DockPanel>
-                                </Border>
-                                <!-- Tab content -->
-                                <Border Grid.Row="1" Background="Transparent" BorderThickness="0">
-                                    <ContentPresenter x:Name="PART_SelectedContentHost"
-                                                      ContentSource="SelectedContent"
-                                                      Margin="0"/>
-                                </Border>
-                            </Grid>
-                        </ControlTemplate>
-                    </TabControl.Template>
-
-                    <!-- Tab item container style with hover effect -->
-                    <TabControl.ItemContainerStyle>
-                        <Style TargetType="TabItem" BasedOn="{StaticResource {x:Type TabItem}}">
-                            <Setter Property="Padding" Value="4,4"/>
-                            <Setter Property="Background" Value="Transparent"/>
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#2a2d2e"/>
-                                </Trigger>
-                                <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="#1e1e1e"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TabControl.ItemContainerStyle>
-
-                    <!-- Tab Header Template -->
-                    <TabControl.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel x:Name="TabHeader" Orientation="Horizontal" Margin="2,0">
-                                <StackPanel.ContextMenu>
-                                    <ContextMenu>
-                                        <MenuItem Header="Close" Click="TabClose_Click">
-                                            <MenuItem.Icon>
-                                                <iconPacks:PackIconMaterial Kind="Close" Width="14" Height="14"/>
-                                            </MenuItem.Icon>
-                                        </MenuItem>
-                                        <MenuItem Header="Close Others" Click="TabCloseOthers_Click"/>
-                                        <MenuItem Header="Close All" Click="TabCloseAll_Click"/>
-                                        <MenuItem Header="Close Tabs to the Right" Click="TabCloseToRight_Click"/>
-                                        <Separator/>
-                                        <MenuItem Header="Duplicate" Click="TabDuplicate_Click">
-                                            <MenuItem.Icon>
-                                                <iconPacks:PackIconMaterial Kind="ContentCopy" Width="14" Height="14"/>
-                                            </MenuItem.Icon>
-                                        </MenuItem>
-                                        <Separator/>
-                                        <MenuItem Header="Reconnect" Click="TabReconnect_Click">
-                                            <MenuItem.Icon>
-                                                <iconPacks:PackIconMaterial Kind="Refresh" Width="14" Height="14"/>
-                                            </MenuItem.Icon>
-                                        </MenuItem>
-                                    </ContextMenu>
-                                </StackPanel.ContextMenu>
-                                <!-- Status dot -->
-                                <Ellipse Width="8" Height="8" Margin="0,0,6,0"
-                                         Fill="{Binding IsConnected, Converter={StaticResource StatusToColor}}"/>
-                                <TextBlock Text="{Binding Title}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <!-- Close button: visible on hover or when selected -->
-                                <Button x:Name="CloseBtn"
-                                        Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=TabControl}}"
-                                        CommandParameter="{Binding}"
-                                        ToolTip="Close" Padding="2"
-                                        Width="18" Height="18">
-                                    <Button.Style>
-                                        <Style TargetType="Button" BasedOn="{StaticResource MahApps.Styles.Button.Chromeless}">
-                                            <Setter Property="Opacity" Value="0"/>
+                        <!-- Tab headers (scrollable) -->
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Disabled">
+                            <StackPanel Orientation="Horizontal">
+                                <!-- Home tab (always first, cannot be closed) -->
+                                <Border Padding="8,6" Margin="0,2,0,0" Cursor="Hand"
+                                        CornerRadius="4,4,0,0"
+                                        MouseLeftButtonDown="HomeTab_Click">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="Transparent"/>
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=TabItem}}" Value="True">
-                                                    <Setter Property="Opacity" Value="0.7"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding IsMouseOver, ElementName=TabHeader}" Value="True">
-                                                    <Setter Property="Opacity" Value="0.7"/>
-                                                </DataTrigger>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Opacity" Value="1"/>
+                                                    <Setter Property="Background" Value="#2a2d2e"/>
                                                 </Trigger>
+                                                <DataTrigger Binding="{Binding IsHomeSelected}" Value="True">
+                                                    <Setter Property="Background" Value="#1e1e1e"/>
+                                                </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
-                                    </Button.Style>
-                                    <iconPacks:PackIconMaterial Kind="Close" Width="10" Height="10"/>
-                                </Button>
-                            </StackPanel>
-                        </DataTemplate>
-                    </TabControl.ItemTemplate>
-
-                    <!-- Tab Content Template -->
-                    <TabControl.ContentTemplate>
-                        <DataTemplate>
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="*"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-
-                                <!-- Terminal Control -->
-                                <views:TerminalControl Grid.Row="0" />
-
-                                <!-- SFTP Toggle & Splitter -->
-                                <Border Grid.Row="1"
-                                        Background="{StaticResource ToolbarBackground}"
-                                        BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,1,0,0"
-                                        Padding="4,2">
-                                    <DockPanel>
-                                        <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                                            <Ellipse Width="8" Height="8" Margin="0,0,6,0"
-                                                     Fill="{Binding IsConnected, Converter={StaticResource StatusToColor}}"/>
-                                            <TextBlock Text="{Binding StatusText}" FontSize="11" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                        <ToggleButton x:Name="SftpToggle"
-                                                      DockPanel.Dock="Right"
-                                                      HorizontalAlignment="Right"
-                                                      Style="{StaticResource MahApps.Styles.ToggleButton.Flat}"
-                                                      IsChecked="False"
-                                                      ToolTip="Toggle SFTP Browser"
-                                                      Padding="6,2">
-                                            <StackPanel Orientation="Horizontal">
-                                                <iconPacks:PackIconMaterial Kind="FolderNetwork" Width="14" Height="14" Margin="0,0,4,0"/>
-                                                <TextBlock Text="SFTP" FontSize="11"/>
-                                            </StackPanel>
-                                        </ToggleButton>
-                                    </DockPanel>
+                                    </Border.Style>
+                                    <StackPanel Orientation="Horizontal">
+                                        <iconPacks:PackIconMaterial Kind="Home" Width="14" Height="14"
+                                                                    Foreground="{StaticResource AccentBlueBrush}"
+                                                                    Margin="0,0,6,0"
+                                                                    VerticalAlignment="Center"/>
+                                        <TextBlock Text="Home" VerticalAlignment="Center" FontSize="12"/>
+                                    </StackPanel>
                                 </Border>
 
-                                <!-- SFTP Browser (collapsible) -->
-                                <views:SftpBrowserControl Grid.Row="2"
-                                    DataContext="{Binding SftpBrowserViewModel}"
-                                    Height="250"
-                                    Visibility="{Binding IsChecked, ElementName=SftpToggle, Converter={StaticResource BoolToVis}}"/>
+                                <!-- Session tabs (dynamic, from Tabs collection) -->
+                                <ItemsControl ItemsSource="{Binding Tabs}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Padding="4,6" Margin="2,2,0,0" Cursor="Hand"
+                                                    CornerRadius="4,4,0,0"
+                                                    MouseLeftButtonDown="SessionTab_Click">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="Transparent"/>
+                                                        <Style.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="Background" Value="#2a2d2e"/>
+                                                            </Trigger>
+                                                            <DataTrigger Value="True">
+                                                                <DataTrigger.Binding>
+                                                                    <MultiBinding Converter="{StaticResource EqualityConverter}">
+                                                                        <Binding />
+                                                                        <Binding Path="DataContext.SelectedTab"
+                                                                                 RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                                                                    </MultiBinding>
+                                                                </DataTrigger.Binding>
+                                                                <Setter Property="Background" Value="#1e1e1e"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <StackPanel x:Name="TabHeader" Orientation="Horizontal" Margin="2,0">
+                                                    <StackPanel.ContextMenu>
+                                                        <ContextMenu>
+                                                            <MenuItem Header="Close" Click="TabClose_Click">
+                                                                <MenuItem.Icon>
+                                                                    <iconPacks:PackIconMaterial Kind="Close" Width="14" Height="14"/>
+                                                                </MenuItem.Icon>
+                                                            </MenuItem>
+                                                            <MenuItem Header="Close Others" Click="TabCloseOthers_Click"/>
+                                                            <MenuItem Header="Close All" Click="TabCloseAll_Click"/>
+                                                            <MenuItem Header="Close Tabs to the Right" Click="TabCloseToRight_Click"/>
+                                                            <Separator/>
+                                                            <MenuItem Header="Duplicate" Click="TabDuplicate_Click">
+                                                                <MenuItem.Icon>
+                                                                    <iconPacks:PackIconMaterial Kind="ContentCopy" Width="14" Height="14"/>
+                                                                </MenuItem.Icon>
+                                                            </MenuItem>
+                                                            <Separator/>
+                                                            <MenuItem Header="Reconnect" Click="TabReconnect_Click">
+                                                                <MenuItem.Icon>
+                                                                    <iconPacks:PackIconMaterial Kind="Refresh" Width="14" Height="14"/>
+                                                                </MenuItem.Icon>
+                                                            </MenuItem>
+                                                        </ContextMenu>
+                                                    </StackPanel.ContextMenu>
+                                                    <!-- Status dot -->
+                                                    <Ellipse Width="8" Height="8" Margin="0,0,6,0"
+                                                             Fill="{Binding IsConnected, Converter={StaticResource StatusToColor}}"/>
+                                                    <TextBlock Text="{Binding Title}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                    <!-- Close button: visible on hover -->
+                                                    <Button x:Name="CloseBtn"
+                                                            Click="TabCloseButton_Click"
+                                                            ToolTip="Close" Padding="2"
+                                                            Width="18" Height="18">
+                                                        <Button.Style>
+                                                            <Style TargetType="Button" BasedOn="{StaticResource MahApps.Styles.Button.Chromeless}">
+                                                                <Setter Property="Opacity" Value="0"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Value="True">
+                                                                        <DataTrigger.Binding>
+                                                                            <MultiBinding Converter="{StaticResource EqualityConverter}">
+                                                                                <Binding Path="DataContext"
+                                                                                         RelativeSource="{RelativeSource Self}"/>
+                                                                                <Binding Path="DataContext.SelectedTab"
+                                                                                         RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                                                                            </MultiBinding>
+                                                                        </DataTrigger.Binding>
+                                                                        <Setter Property="Opacity" Value="0.7"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding IsMouseOver, ElementName=TabHeader}" Value="True">
+                                                                        <Setter Property="Opacity" Value="0.7"/>
+                                                                    </DataTrigger>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter Property="Opacity" Value="1"/>
+                                                                    </Trigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Button.Style>
+                                                        <iconPacks:PackIconMaterial Kind="Close" Width="10" Height="10"/>
+                                                    </Button>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
 
-                            </Grid>
-                        </DataTemplate>
-                    </TabControl.ContentTemplate>
-                </TabControl>
+                <!-- Content area -->
+                <Grid Grid.Row="1">
+                    <!-- Home view (visible when IsHomeSelected is true) -->
+                    <Border Background="#1e1e1e"
+                            Visibility="{Binding IsHomeSelected, Converter={StaticResource BoolToVis}}">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <iconPacks:PackIconMaterial Kind="Console" Width="64" Height="64"
+                                                        Foreground="#333" HorizontalAlignment="Center"
+                                                        Margin="0,0,0,16"/>
+                            <TextBlock Text="WinSTerm" FontSize="28" FontWeight="Light"
+                                       Foreground="#555" HorizontalAlignment="Center"
+                                       Margin="0,0,0,8"/>
+                            <TextBlock Text="Enter a host above or double-click a session to connect"
+                                       FontSize="13" Foreground="#444" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Session tab content (visible when a session tab is selected) -->
+                    <ContentControl Content="{Binding SelectedTab}"
+                                    Visibility="{Binding IsHomeSelected, Converter={StaticResource InverseBoolToVis}}">
+                        <ContentControl.ContentTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Terminal Control -->
+                                    <views:TerminalControl Grid.Row="0" />
+
+                                    <!-- SFTP Toggle & Splitter -->
+                                    <Border Grid.Row="1"
+                                            Background="{StaticResource ToolbarBackground}"
+                                            BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,1,0,0"
+                                            Padding="4,2">
+                                        <DockPanel>
+                                            <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                                                <Ellipse Width="8" Height="8" Margin="0,0,6,0"
+                                                         Fill="{Binding IsConnected, Converter={StaticResource StatusToColor}}"/>
+                                                <TextBlock Text="{Binding StatusText}" FontSize="11" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <ToggleButton x:Name="SftpToggle"
+                                                          DockPanel.Dock="Right"
+                                                          HorizontalAlignment="Right"
+                                                          Style="{StaticResource MahApps.Styles.ToggleButton.Flat}"
+                                                          IsChecked="False"
+                                                          ToolTip="Toggle SFTP Browser"
+                                                          Padding="6,2">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <iconPacks:PackIconMaterial Kind="FolderNetwork" Width="14" Height="14" Margin="0,0,4,0"/>
+                                                    <TextBlock Text="SFTP" FontSize="11"/>
+                                                </StackPanel>
+                                            </ToggleButton>
+                                        </DockPanel>
+                                    </Border>
+
+                                    <!-- SFTP Browser (collapsible) -->
+                                    <views:SftpBrowserControl Grid.Row="2"
+                                        DataContext="{Binding SftpBrowserViewModel}"
+                                        Height="250"
+                                        Visibility="{Binding IsChecked, ElementName=SftpToggle, Converter={StaticResource BoolToVis}}"/>
+
+                                </Grid>
+                            </DataTemplate>
+                        </ContentControl.ContentTemplate>
+                    </ContentControl>
+                </Grid>
             </Grid>
         </Grid>
     </DockPanel>
