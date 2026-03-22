@@ -1,8 +1,8 @@
 # WinSTerm - Windows SSH Terminal
 
-A modern Windows SSH terminal application inspired by MobaXterm, built with WPF and .NET 8.
+A modern Windows SSH terminal application inspired by MobaXterm, built with WPF and .NET 10.
 
-![Dark Theme](https://img.shields.io/badge/theme-dark-1e1e1e) ![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4) ![WPF](https://img.shields.io/badge/UI-WPF-blue)
+![Dark Theme](https://img.shields.io/badge/theme-dark-1e1e1e) ![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4) ![WPF](https://img.shields.io/badge/UI-WPF-blue)
 
 ## Features
 
@@ -39,7 +39,7 @@ dotnet run --project src\WinSTerm\WinSTerm.csproj
 ## Requirements
 
 - Windows 10/11
-- .NET 8 SDK
+- .NET 10 SDK
 - WebView2 Runtime (included with modern Windows)
 
 ## License

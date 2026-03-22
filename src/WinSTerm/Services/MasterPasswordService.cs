@@ -81,12 +81,12 @@ public static class MasterPasswordService
 
     private static string HashPassword(string password, byte[] salt)
     {
-        using var pbkdf2 = new Rfc2898DeriveBytes(
+        var hash = Rfc2898DeriveBytes.Pbkdf2(
             Encoding.UTF8.GetBytes(password),
             salt,
             Iterations,
-            HashAlgorithmName.SHA256);
-        var hash = pbkdf2.GetBytes(HashBytes);
+            HashAlgorithmName.SHA256,
+            HashBytes);
         return Convert.ToBase64String(hash);
     }
 }
