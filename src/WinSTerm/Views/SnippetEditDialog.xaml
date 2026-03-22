@@ -17,7 +17,6 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Name -->
@@ -45,15 +44,8 @@
                      mah:TextBoxHelper.Watermark="Optional description"/>
         </StackPanel>
 
-        <!-- Category -->
-        <StackPanel Grid.Row="3" Margin="0,0,0,16">
-            <TextBlock Text="Category" Margin="0,0,0,4"/>
-            <TextBox x:Name="CategoryBox"
-                     mah:TextBoxHelper.Watermark="e.g. Monitoring, Cleanup"/>
-        </StackPanel>
-
         <!-- Buttons -->
-        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="OK" MinWidth="80" Margin="0,0,8,0"
                     Style="{DynamicResource MahApps.Styles.Button.Square.Accent}"
                     Click="OkButton_Click"/>

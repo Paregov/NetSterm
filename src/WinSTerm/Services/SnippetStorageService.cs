@@ -123,15 +123,6 @@ public sealed class SnippetStorageService
         {
             var json = File.ReadAllText(_filePath);
 
-            // Backward compatibility: if the file contains a JSON array (old format),
-            // treat it as snippets with no folders.
-            var trimmed = json.TrimStart();
-            if (trimmed.StartsWith('['))
-            {
-                var snippets = JsonSerializer.Deserialize<List<CommandSnippet>>(json, s_jsonOptions) ?? [];
-                return new SnippetStore { Snippets = snippets };
-            }
-
             return JsonSerializer.Deserialize<SnippetStore>(json, s_jsonOptions) ?? new SnippetStore();
         }
         catch

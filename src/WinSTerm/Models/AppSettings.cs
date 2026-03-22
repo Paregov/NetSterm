@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace WinSTerm.Models;
 
 public class AppSettings
@@ -31,25 +33,6 @@ public class AppSettings
 
     public AppSettings Clone()
     {
-        return new AppSettings
-        {
-            FontFamily = FontFamily,
-            FontSize = FontSize,
-            ScrollbackLines = ScrollbackLines,
-            CursorStyle = CursorStyle,
-            CursorBlink = CursorBlink,
-            DefaultKeepAliveSeconds = DefaultKeepAliveSeconds,
-            ConnectionTimeoutSeconds = ConnectionTimeoutSeconds,
-            DefaultCompression = DefaultCompression,
-            ShowStatusBar = ShowStatusBar,
-            ShowQuickConnect = ShowQuickConnect,
-            ConfirmOnCloseTab = ConfirmOnCloseTab,
-            ConfirmOnExit = ConfirmOnExit,
-            DefaultLocalDirectory = DefaultLocalDirectory,
-            ShowHiddenFiles = ShowHiddenFiles,
-            IsMasterPasswordEnabled = IsMasterPasswordEnabled,
-            MasterPasswordHash = MasterPasswordHash,
-            MasterPasswordSalt = MasterPasswordSalt
-        };
+        return JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(this))!;
     }
 }

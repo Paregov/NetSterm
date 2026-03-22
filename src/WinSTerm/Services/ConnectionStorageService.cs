@@ -34,8 +34,15 @@ public class ConnectionStorageService : IConnectionStorageService
         if (!File.Exists(_filePath))
             return new ConnectionStore();
 
-        var json = File.ReadAllText(_filePath);
-        return JsonSerializer.Deserialize<ConnectionStore>(json, s_jsonOptions) ?? new ConnectionStore();
+        try
+        {
+            var json = File.ReadAllText(_filePath);
+            return JsonSerializer.Deserialize<ConnectionStore>(json, s_jsonOptions) ?? new ConnectionStore();
+        }
+        catch
+        {
+            return new ConnectionStore();
+        }
     }
 
     public void Save()

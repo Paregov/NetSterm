@@ -21,7 +21,6 @@ public partial class SnippetEditDialog : MetroWindow
             NameBox.Text = existing.Name;
             CommandBox.Text = existing.Command;
             DescriptionBox.Text = existing.Description ?? "";
-            CategoryBox.Text = existing.Category ?? "";
         }
 
         NameBox.Focus();
@@ -49,7 +48,7 @@ public partial class SnippetEditDialog : MetroWindow
             Name = NameBox.Text.Trim(),
             Command = CommandBox.Text.Trim(),
             Description = string.IsNullOrWhiteSpace(DescriptionBox.Text) ? null : DescriptionBox.Text.Trim(),
-            Category = string.IsNullOrWhiteSpace(CategoryBox.Text) ? null : CategoryBox.Text.Trim(),
+            FolderId = _existing?.FolderId,
             CreatedAt = _existing?.CreatedAt ?? DateTime.UtcNow
         };
 
