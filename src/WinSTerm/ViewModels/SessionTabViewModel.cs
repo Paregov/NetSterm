@@ -52,7 +52,7 @@ public partial class SessionTabViewModel : ObservableObject, IDisposable
             IsConnecting = true;
             StatusText = "Connecting...";
 
-            // Wait for terminal WebView2 to initialize before connecting.
+            // Wait for terminal WebView to initialize before connecting.
             // Keyboard-interactive auth prompts write to the terminal during connect.
             await TerminalReady.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
