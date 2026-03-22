@@ -1,24 +1,34 @@
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using WinSTerm.Models;
+using WinSTerm.ViewModels;
 
 namespace WinSTerm.Views;
 
 public partial class ConnectionDialog : Window
 {
-    /// <summary>
-    /// The connection info result set when the user saves the dialog.
-    /// Null if the dialog was cancelled.
-    /// </summary>
-    public ConnectionInfo? Result { get; set; }
+    private readonly ConnectionDialogViewModel _viewModel;
 
-    public ConnectionDialog()
+    public ConnectionDialog() : this(null)
     {
+    }
+
+    public ConnectionDialog(ConnectionInfo? existing)
+    {
+        _viewModel = new ConnectionDialogViewModel(existing);
+        DataContext = _viewModel;
         InitializeComponent();
     }
 
-    public ConnectionDialog(ConnectionInfo existing) : this()
+    public ConnectionInfo? Result => _viewModel.Result;
+
+    private void PasswordRadio_Click(object? sender, RoutedEventArgs e)
     {
-        // TODO: Populate dialog fields from existing connection info
-        // when dialog UI is fully ported
+        _viewModel.SelectedAuthMethod = AuthMethod.Password;
+    }
+
+    private void PrivateKeyRadio_Click(object? sender, RoutedEventArgs e)
+    {
+        _viewModel.SelectedAuthMethod = AuthMethod.PrivateKey;
     }
 }
