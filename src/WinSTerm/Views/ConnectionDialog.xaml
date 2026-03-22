@@ -17,7 +17,6 @@
     <mah:MetroWindow.Resources>
         <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
         <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis"/>
-        <converters:EditModeTitleConverter x:Key="EditModeTitleConverter"/>
     </mah:MetroWindow.Resources>
 
     <Grid Margin="20">
