@@ -3,6 +3,8 @@ using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Threading;
 using WinSTerm.Services;
 using WinSTerm.ViewModels;
 
@@ -12,6 +14,8 @@ public partial class TerminalControl : UserControl
 {
     private SshConnectionService? _sshService;
     private bool _isWebViewReady;
+    private bool _isSearchVisible;
+    private readonly DispatcherTimer _searchDebounceTimer;
 
     public TerminalControl()
     {
@@ -19,6 +23,9 @@ public partial class TerminalControl : UserControl
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
         DataContextChanged += OnDataContextChanged;
+
+        _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+        _searchDebounceTimer.Tick += OnSearchDebounceTimerTick;
     }
 
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -159,5 +166,83 @@ public partial class TerminalControl : UserControl
     {
         if (_isWebViewReady)
             await TerminalWebView.CoreWebView2.ExecuteScriptAsync("window.terminalClear()");
+    }
+
+    // --- Search overlay ---
+
+    private void OnPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.F && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+        {
+            ShowSearch();
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Escape && _isSearchVisible)
+        {
+            HideSearch();
+            e.Handled = true;
+        }
+    }
+
+    private void ShowSearch()
+    {
+        _isSearchVisible = true;
+        SearchBar.Visibility = Visibility.Visible;
+        SearchTextBox.Focus();
+        SearchTextBox.SelectAll();
+    }
+
+    private async void HideSearch()
+    {
+        _isSearchVisible = false;
+        SearchBar.Visibility = Visibility.Collapsed;
+        _searchDebounceTimer.Stop();
+
+        if (_isWebViewReady)
+            await TerminalWebView.CoreWebView2.ExecuteScriptAsync("window.terminalFocus()");
+    }
+
+    private void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        _searchDebounceTimer.Stop();
+        _searchDebounceTimer.Start();
+    }
+
+    private async void OnSearchDebounceTimerTick(object? sender, EventArgs e)
+    {
+        _searchDebounceTimer.Stop();
+        var query = SearchTextBox.Text;
+        if (!string.IsNullOrEmpty(query))
+            await SearchAsync(query);
+    }
+
+    private void SearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            if ((Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
+                _ = SearchPreviousAsync();
+            else
+                _ = SearchNextAsync();
+
+            e.Handled = true;
+        }
+    }
+
+    private async void PreviousMatchButton_Click(object sender, RoutedEventArgs e)
+    {
+        await SearchPreviousAsync();
+    }
+
+    private async void NextMatchButton_Click(object sender, RoutedEventArgs e)
+    {
+        await SearchNextAsync();
+    }
+
+    private void CloseSearchButton_Click(object sender, RoutedEventArgs e)
+    {
+        HideSearch();
     }
 }
