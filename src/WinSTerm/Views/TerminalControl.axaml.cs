@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Serilog;
 using WebViewCore.Events;
 using WinSTerm.Services;
@@ -99,11 +100,21 @@ public partial class TerminalControl : UserControl
 
     private void OnUnloaded(object? sender, RoutedEventArgs e)
     {
-        Log.Debug("TerminalControl OnUnloaded, detaching services");
-        DetachSshService();
-        TerminalWebView.WebViewCreated -= OnWebViewCreated;
-        TerminalWebView.NavigationCompleted -= OnNavigationCompleted;
-        TerminalWebView.WebMessageReceived -= OnWebMessageReceived;
+        // Only detach when truly removed from the visual tree (tab closed).
+        // ItemsControl toggles IsVisible, which fires Unloaded in Avalonia.
+        // Detaching here would kill the SSH data stream for hidden tabs.
+        if (this.GetVisualRoot() == null)
+        {
+            Log.Debug("TerminalControl removed from visual tree, detaching services");
+            DetachSshService();
+            TerminalWebView.WebViewCreated -= OnWebViewCreated;
+            TerminalWebView.NavigationCompleted -= OnNavigationCompleted;
+            TerminalWebView.WebMessageReceived -= OnWebMessageReceived;
+        }
+        else
+        {
+            Log.Debug("TerminalControl hidden (visibility change), keeping SSH attached");
+        }
     }
 
     private void AttachSshService(SshConnectionService sshService)

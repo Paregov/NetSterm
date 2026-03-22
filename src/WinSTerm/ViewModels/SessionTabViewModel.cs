@@ -11,6 +11,7 @@ public partial class SessionTabViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _title = "New Session";
     [ObservableProperty] private bool _isConnected;
     [ObservableProperty] private bool _isConnecting;
+    [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private string _statusText = "Disconnected";
     [ObservableProperty] private string _currentRemoteDirectory = "/";
 

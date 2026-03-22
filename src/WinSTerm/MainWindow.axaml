@@ -755,12 +755,17 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Session tab content (visible when a session tab is selected) -->
-                    <ContentControl Content="{Binding SelectedTab}"
-                                    IsVisible="{Binding !IsHomeSelected}">
-                        <ContentControl.ContentTemplate>
+                    <!-- Session terminals: ALL kept alive, only selected visible -->
+                    <ItemsControl ItemsSource="{Binding Tabs}"
+                                  IsVisible="{Binding !IsHomeSelected}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <Grid/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Grid>
+                                <Grid IsVisible="{Binding IsSelected}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="*"/>
                                         <RowDefinition Height="Auto"/>
@@ -781,12 +786,12 @@
                                                          Fill="{Binding IsConnected, Converter={StaticResource StatusToColor}}"/>
                                                 <TextBlock Text="{Binding StatusText}" FontSize="11" VerticalAlignment="Center"/>
                                             </StackPanel>
-                                            <ToggleButton x:Name="SftpToggle"
-                                                          DockPanel.Dock="Right"
+                                            <ToggleButton DockPanel.Dock="Right"
                                                           HorizontalAlignment="Right"
                                                           IsChecked="False"
                                                           ToolTip.Tip="Toggle SFTP Browser"
-                                                          Padding="6,2">
+                                                          Padding="6,2"
+                                                          x:Name="SftpToggle">
                                                 <StackPanel Orientation="Horizontal">
                                                     <mi:MaterialIcon Kind="FolderNetwork" Width="14" Height="14" Margin="0,0,4,0"/>
                                                     <TextBlock Text="SFTP" FontSize="11"/>
@@ -803,8 +808,8 @@
 
                                 </Grid>
                             </DataTemplate>
-                        </ContentControl.ContentTemplate>
-                    </ContentControl>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </Grid>
             </Grid>
         </Grid>

@@ -90,11 +90,15 @@ public partial class MainViewModel : ObservableObject
     partial void OnSelectedTabChanged(SessionTabViewModel? oldValue, SessionTabViewModel? newValue)
     {
         if (oldValue != null)
+        {
             oldValue.PropertyChanged -= OnSelectedTabPropertyChanged;
+            oldValue.IsSelected = false;
+        }
 
         if (newValue != null)
         {
             newValue.PropertyChanged += OnSelectedTabPropertyChanged;
+            newValue.IsSelected = true;
             IsHomeSelected = false;
         }
         else
