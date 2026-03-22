@@ -200,10 +200,12 @@ public partial class MainWindow : Window
         try
         {
             await tab.ConnectAsync(password);
+            ViewModel.StatusMessage = $"Connected to {info.Host}";
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Failed to connect to {Host}:{Port}", info.Host, info.Port);
+            ViewModel.StatusMessage = $"Connection failed: {info.Host}";
             await ShowErrorAsync("Connection Error",
                 $"Failed to connect to {info.Host}:{info.Port}\n\n{ex.Message}");
             ViewModel.CloseTabCommand.Execute(tab);
