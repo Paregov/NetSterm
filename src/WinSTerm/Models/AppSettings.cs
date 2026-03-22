@@ -42,6 +42,7 @@ public class AppSettings
             ConnectionTimeoutSeconds = ConnectionTimeoutSeconds,
             DefaultCompression = DefaultCompression,
             ShowStatusBar = ShowStatusBar,
+            ShowQuickConnect = ShowQuickConnect,
             ConfirmOnCloseTab = ConfirmOnCloseTab,
             ConfirmOnExit = ConfirmOnExit,
             DefaultLocalDirectory = DefaultLocalDirectory,

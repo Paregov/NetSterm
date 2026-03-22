@@ -43,6 +43,22 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _quickUsername = "";
     [ObservableProperty] private int _quickPort = 22;
 
+    // Quick connect toolbar visibility
+    [ObservableProperty] private bool _isQuickConnectVisible = SettingsService.Instance.Current.ShowQuickConnect;
+
+    partial void OnIsQuickConnectVisibleChanged(bool value)
+    {
+        var settings = SettingsService.Instance.Current;
+        settings.ShowQuickConnect = value;
+        SettingsService.Instance.Save();
+    }
+
+    [RelayCommand]
+    private void ToggleQuickConnect()
+    {
+        IsQuickConnectVisible = !IsQuickConnectVisible;
+    }
+
     // Status bar
     [ObservableProperty] private string _statusMessage = "Ready";
     [ObservableProperty] private int _connectionCount;

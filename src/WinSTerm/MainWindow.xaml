@@ -96,6 +96,15 @@
                 <Separator/>
                 <MenuItem Header="E_xit" Click="Exit_Click"/>
             </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="Quick Connect _Bar"
+                          IsCheckable="True"
+                          IsChecked="{Binding IsQuickConnectVisible, Mode=TwoWay}">
+                    <MenuItem.Icon>
+                        <iconPacks:PackIconMaterial Kind="ServerNetwork" Width="14" Height="14"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
             <MenuItem Header="_Sessions">
                 <MenuItem Header="_Quick Connect" Command="{Binding QuickConnectCommand}"/>
             </MenuItem>
@@ -108,7 +117,8 @@
         <Border DockPanel.Dock="Top"
                 Background="{StaticResource ToolbarBackground}"
                 BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,0,0,1"
-                Padding="8,4">
+                Padding="8,4"
+                Visibility="{Binding IsQuickConnectVisible, Converter={StaticResource BoolToVis}}">
             <StackPanel Orientation="Horizontal">
                 <iconPacks:PackIconMaterial Kind="ServerNetwork" VerticalAlignment="Center"
                                            Margin="0,0,6,0" Width="16" Height="16"
