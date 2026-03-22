@@ -1,3 +1,4 @@
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using WinSTerm.Models;
 using WinSTerm.Services;
@@ -29,7 +30,7 @@ public partial class SessionTabViewModel : ObservableObject, IDisposable
 
     private void OnDisconnected()
     {
-        System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
+        Dispatcher.UIThread.Post(() =>
         {
             IsConnected = false;
             StatusText = "Connection lost";
@@ -38,7 +39,7 @@ public partial class SessionTabViewModel : ObservableObject, IDisposable
 
     private void OnCurrentDirectoryChanged(string path)
     {
-        System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
+        Dispatcher.UIThread.Post(() =>
         {
             CurrentRemoteDirectory = path;
         });

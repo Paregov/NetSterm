@@ -1,4 +1,4 @@
-using System.Windows;
+using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using WinSTerm.Models;
@@ -99,29 +99,20 @@ public partial class SettingsDialogViewModel : ObservableObject
 
         SettingsService.Instance.Apply(settings);
 
-        window.DialogResult = true;
+        // TODO: Avalonia migration - use window.Close(result) pattern for dialog result
         window.Close();
     }
 
     [RelayCommand]
     private void Cancel(Window window)
     {
-        window.DialogResult = false;
         window.Close();
     }
 
     [RelayCommand]
     private void BrowseLocalDirectory()
     {
-        var dialog = new Microsoft.Win32.OpenFolderDialog
-        {
-            Title = "Select Default SFTP Local Directory",
-            InitialDirectory = DefaultLocalDirectory
-        };
-
-        if (dialog.ShowDialog() == true)
-        {
-            DefaultLocalDirectory = dialog.FolderName;
-        }
+        // TODO: Avalonia migration - Use Avalonia folder picker (StorageProvider API)
+        // var dialog = new OpenFolderDialog { ... };
     }
 }

@@ -1,8 +1,8 @@
-using MahApps.Metro.Controls;
+using Avalonia.Controls;
 
 namespace WinSTerm.Views;
 
-public partial class AboutDialog : MetroWindow
+public partial class AboutDialog : Window
 {
     public AboutDialog()
     {

@@ -1,0 +1,10 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="WinSTerm.MainWindow"
+        Title="WinSTerm - SSH Terminal"
+        Width="1200" Height="800">
+    <TextBlock Text="WinSTerm - Migration in progress..."
+               VerticalAlignment="Center"
+               HorizontalAlignment="Center"
+               FontSize="24"/>
+</Window>

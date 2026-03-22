@@ -1,8 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Win32;
+using Avalonia.Controls;
 using WinSTerm.Models;
 using WinSTerm.Services;
 
@@ -162,16 +161,8 @@ public partial class ConnectionDialogViewModel : ObservableValidator
     [RelayCommand]
     private void BrowseKey()
     {
-        var dialog = new OpenFileDialog
-        {
-            Title = "Select Private Key File",
-            Filter = "Key Files (*.pem;*.ppk;*.key)|*.pem;*.ppk;*.key|All Files (*.*)|*.*"
-        };
-
-        if (dialog.ShowDialog() == true)
-        {
-            PrivateKeyPath = dialog.FileName;
-        }
+        // TODO: Avalonia migration - Use Avalonia file picker (StorageProvider API)
+        // var dialog = new OpenFileDialog { ... };
     }
 
     private bool CanSave()
@@ -222,14 +213,13 @@ public partial class ConnectionDialogViewModel : ObservableValidator
             Description = NullIfEmpty(Description)
         };
 
-        window.DialogResult = true;
+        // TODO: Avalonia migration - use window.Close(result) pattern for dialog result
         window.Close();
     }
 
     [RelayCommand]
     private void Cancel(Window window)
     {
-        window.DialogResult = false;
         window.Close();
     }
 

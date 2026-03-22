@@ -1,5 +1,6 @@
+using System;
 using System.Globalization;
-using System.Windows.Data;
+using Avalonia.Data.Converters;
 
 namespace WinSTerm.Converters;
 
@@ -7,7 +8,7 @@ public class FileSizeConverter : IValueConverter
 {
     private static readonly string[] Units = ["B", "KB", "MB", "GB", "TB"];
 
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         var bytes = value switch
         {
@@ -33,7 +34,7 @@ public class FileSizeConverter : IValueConverter
             : $"{size:F1} {Units[unitIndex]}";
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         throw new NotSupportedException();
     }
