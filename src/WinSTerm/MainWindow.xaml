@@ -161,129 +161,267 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Left Sidebar: Session Tree -->
+            <!-- Left Sidebar: Sessions / SFTP Toggle -->
             <Border Grid.Column="0"
                     Background="{StaticResource SidebarBackground}"
                     BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,0,1,0">
                 <DockPanel>
-                    <!-- Sidebar Header -->
-                    <Border DockPanel.Dock="Top" Padding="8,6"
+                    <!-- Sidebar Toggle Header -->
+                    <Border DockPanel.Dock="Top"
                             Background="{StaticResource ToolbarBackground}"
                             BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,0,0,1">
-                        <DockPanel>
-                            <TextBlock Text="Sessions" FontWeight="SemiBold" FontSize="13"
-                                       VerticalAlignment="Center"/>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                <Button Command="{Binding AddFolderCommand}" ToolTip="New Folder"
-                                        Style="{StaticResource MahApps.Styles.Button.Chromeless}"
-                                        Padding="4" Margin="2,0">
-                                    <iconPacks:PackIconMaterial Kind="FolderPlus" Width="14" Height="14"/>
-                                </Button>
-                            </StackPanel>
-                        </DockPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <RadioButton Grid.Column="0" GroupName="SidebarTab"
+                                         IsChecked="{Binding IsSftpSidebarVisible, Converter={StaticResource InverseBool}}"
+                                         Style="{StaticResource SidebarTabStyle}">
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial Kind="FolderAccount" Width="12" Height="12" Margin="0,0,4,0"/>
+                                    <TextBlock Text="Sessions" FontSize="12"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton Grid.Column="1" GroupName="SidebarTab"
+                                         IsChecked="{Binding IsSftpSidebarVisible}"
+                                         Style="{StaticResource SidebarTabStyle}">
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial Kind="FolderNetwork" Width="12" Height="12" Margin="0,0,4,0"/>
+                                    <TextBlock Text="SFTP" FontSize="12"/>
+                                </StackPanel>
+                            </RadioButton>
+                        </Grid>
                     </Border>
 
-                    <!-- TreeView -->
-                    <TreeView x:Name="SessionTreeView"
-                              ItemsSource="{Binding SessionTree}"
-                              Background="Transparent" BorderThickness="0"
-                              Padding="4"
-                              MouseDoubleClick="SessionTree_MouseDoubleClick">
-                        <TreeView.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Header="New Connection" Click="NewConnectionFromTree_Click">
-                                    <MenuItem.Icon>
-                                        <iconPacks:PackIconMaterial Kind="Plus" Width="14" Height="14"/>
-                                    </MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="New Folder" Click="NewFolderFromTree_Click">
-                                    <MenuItem.Icon>
+                    <!-- Content area: Sessions and SFTP panels overlaid -->
+                    <Grid>
+                        <!-- ===== Sessions Panel ===== -->
+                        <DockPanel Visibility="{Binding IsSftpSidebarVisible, Converter={StaticResource InverseBoolToVis}}">
+                            <!-- Sessions toolbar -->
+                            <Border DockPanel.Dock="Top" Padding="4,2"
+                                    Background="{StaticResource ToolbarBackground}"
+                                    BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,0,0,1">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Command="{Binding AddFolderCommand}" ToolTip="New Folder"
+                                            Style="{StaticResource MahApps.Styles.Button.Chromeless}"
+                                            Padding="4" Margin="2,0">
                                         <iconPacks:PackIconMaterial Kind="FolderPlus" Width="14" Height="14"/>
-                                    </MenuItem.Icon>
-                                </MenuItem>
-                            </ContextMenu>
-                        </TreeView.ContextMenu>
-                        <TreeView.Resources>
-                            <HierarchicalDataTemplate DataType="{x:Type vm:SessionTreeItem}"
-                                                       ItemsSource="{Binding Children}">
-                                <StackPanel Orientation="Horizontal" Margin="2">
-                                    <StackPanel.ContextMenu>
-                                        <ContextMenu>
-                                            <!-- Connection-only: Connect -->
-                                            <MenuItem Header="Connect" Click="ConnectMenuItem_Click"
-                                                      Visibility="{Binding IsFolder, Converter={StaticResource InverseBoolToVis}}">
-                                                <MenuItem.Icon>
-                                                    <iconPacks:PackIconMaterial Kind="Connection" Width="14" Height="14"/>
-                                                </MenuItem.Icon>
-                                            </MenuItem>
-                                            <!-- Folder-only: New Connection Here -->
-                                            <MenuItem Header="New Connection Here" Click="NewConnectionInFolder_Click"
-                                                      Visibility="{Binding IsFolder, Converter={StaticResource BoolToVis}}">
-                                                <MenuItem.Icon>
-                                                    <iconPacks:PackIconMaterial Kind="Plus" Width="14" Height="14"/>
-                                                </MenuItem.Icon>
-                                            </MenuItem>
-                                            <!-- Folder-only: New Subfolder -->
-                                            <MenuItem Header="New Subfolder" Click="NewSubfolderInFolder_Click"
-                                                      Visibility="{Binding IsFolder, Converter={StaticResource BoolToVis}}">
-                                                <MenuItem.Icon>
-                                                    <iconPacks:PackIconMaterial Kind="FolderPlus" Width="14" Height="14"/>
-                                                </MenuItem.Icon>
-                                            </MenuItem>
-                                            <Separator/>
-                                            <!-- Folder-only: Rename -->
-                                            <MenuItem Header="Rename" Click="RenameItem_Click"
-                                                      Visibility="{Binding IsFolder, Converter={StaticResource BoolToVis}}">
-                                                <MenuItem.Icon>
-                                                    <iconPacks:PackIconMaterial Kind="Pencil" Width="14" Height="14"/>
-                                                </MenuItem.Icon>
-                                            </MenuItem>
-                                            <!-- Connection-only: Edit -->
-                                            <MenuItem Header="Edit" Click="EditMenuItem_Click"
-                                                      Visibility="{Binding IsFolder, Converter={StaticResource InverseBoolToVis}}">
-                                                <MenuItem.Icon>
-                                                    <iconPacks:PackIconMaterial Kind="Pencil" Width="14" Height="14"/>
-                                                </MenuItem.Icon>
-                                            </MenuItem>
-                                            <Separator/>
-                                            <!-- Both: Delete -->
-                                            <MenuItem Header="Delete" Click="DeleteMenuItem_Click">
-                                                <MenuItem.Icon>
-                                                    <iconPacks:PackIconMaterial Kind="Delete" Width="14" Height="14"/>
-                                                </MenuItem.Icon>
-                                            </MenuItem>
-                                        </ContextMenu>
-                                    </StackPanel.ContextMenu>
-                                    <!-- Folder icon -->
-                                    <iconPacks:PackIconMaterial Kind="Folder" Width="14" Height="14"
-                                                                Foreground="#dca756"
-                                                                Visibility="{Binding IsFolder, Converter={StaticResource BoolToVis}}"
-                                                                Margin="0,0,6,0"/>
-                                    <!-- Connection icon -->
-                                    <iconPacks:PackIconMaterial Kind="Console" Width="14" Height="14"
-                                                                Foreground="{StaticResource AccentBlueBrush}"
-                                                                Visibility="{Binding IsFolder, Converter={StaticResource InverseBoolToVis}}"
-                                                                Margin="0,0,6,0"/>
-                                    <!-- Normal mode: display name -->
-                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
-                                               Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolToVis}}"/>
-                                    <!-- Edit mode: editable name -->
-                                    <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
-                                             Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"
-                                             MinWidth="100" VerticalAlignment="Center"
-                                             LostFocus="TreeItemTextBox_LostFocus"
-                                             PreviewKeyDown="TreeItemTextBox_KeyDown"
-                                             Loaded="TreeItemTextBox_Loaded"/>
+                                    </Button>
                                 </StackPanel>
-                            </HierarchicalDataTemplate>
-                        </TreeView.Resources>
-                        <TreeView.ItemContainerStyle>
-                            <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
-                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
-                                <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
-                            </Style>
-                        </TreeView.ItemContainerStyle>
-                    </TreeView>
+                            </Border>
+
+                            <!-- Sessions TreeView (preserved exactly) -->
+                            <TreeView x:Name="SessionTreeView"
+                                      ItemsSource="{Binding SessionTree}"
+                                      Background="Transparent" BorderThickness="0"
+                                      Padding="4"
+                                      MouseDoubleClick="SessionTree_MouseDoubleClick">
+                                <TreeView.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="New Connection" Click="NewConnectionFromTree_Click">
+                                            <MenuItem.Icon>
+                                                <iconPacks:PackIconMaterial Kind="Plus" Width="14" Height="14"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="New Folder" Click="NewFolderFromTree_Click">
+                                            <MenuItem.Icon>
+                                                <iconPacks:PackIconMaterial Kind="FolderPlus" Width="14" Height="14"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                    </ContextMenu>
+                                </TreeView.ContextMenu>
+                                <TreeView.Resources>
+                                    <HierarchicalDataTemplate DataType="{x:Type vm:SessionTreeItem}"
+                                                               ItemsSource="{Binding Children}">
+                                        <StackPanel Orientation="Horizontal" Margin="2">
+                                            <StackPanel.ContextMenu>
+                                                <ContextMenu>
+                                                    <!-- Connection-only: Connect -->
+                                                    <MenuItem Header="Connect" Click="ConnectMenuItem_Click"
+                                                              Visibility="{Binding IsFolder, Converter={StaticResource InverseBoolToVis}}">
+                                                        <MenuItem.Icon>
+                                                            <iconPacks:PackIconMaterial Kind="Connection" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <!-- Folder-only: New Connection Here -->
+                                                    <MenuItem Header="New Connection Here" Click="NewConnectionInFolder_Click"
+                                                              Visibility="{Binding IsFolder, Converter={StaticResource BoolToVis}}">
+                                                        <MenuItem.Icon>
+                                                            <iconPacks:PackIconMaterial Kind="Plus" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <!-- Folder-only: New Subfolder -->
+                                                    <MenuItem Header="New Subfolder" Click="NewSubfolderInFolder_Click"
+                                                              Visibility="{Binding IsFolder, Converter={StaticResource BoolToVis}}">
+                                                        <MenuItem.Icon>
+                                                            <iconPacks:PackIconMaterial Kind="FolderPlus" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <Separator/>
+                                                    <!-- Folder-only: Rename -->
+                                                    <MenuItem Header="Rename" Click="RenameItem_Click"
+                                                              Visibility="{Binding IsFolder, Converter={StaticResource BoolToVis}}">
+                                                        <MenuItem.Icon>
+                                                            <iconPacks:PackIconMaterial Kind="Pencil" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <!-- Connection-only: Edit -->
+                                                    <MenuItem Header="Edit" Click="EditMenuItem_Click"
+                                                              Visibility="{Binding IsFolder, Converter={StaticResource InverseBoolToVis}}">
+                                                        <MenuItem.Icon>
+                                                            <iconPacks:PackIconMaterial Kind="Pencil" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <Separator/>
+                                                    <!-- Both: Delete -->
+                                                    <MenuItem Header="Delete" Click="DeleteMenuItem_Click">
+                                                        <MenuItem.Icon>
+                                                            <iconPacks:PackIconMaterial Kind="Delete" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                </ContextMenu>
+                                            </StackPanel.ContextMenu>
+                                            <!-- Folder icon -->
+                                            <iconPacks:PackIconMaterial Kind="Folder" Width="14" Height="14"
+                                                                        Foreground="#dca756"
+                                                                        Visibility="{Binding IsFolder, Converter={StaticResource BoolToVis}}"
+                                                                        Margin="0,0,6,0"/>
+                                            <!-- Connection icon -->
+                                            <iconPacks:PackIconMaterial Kind="Console" Width="14" Height="14"
+                                                                        Foreground="{StaticResource AccentBlueBrush}"
+                                                                        Visibility="{Binding IsFolder, Converter={StaticResource InverseBoolToVis}}"
+                                                                        Margin="0,0,6,0"/>
+                                            <!-- Normal mode: display name -->
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                                       Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolToVis}}"/>
+                                            <!-- Edit mode: editable name -->
+                                            <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                                     Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"
+                                                     MinWidth="100" VerticalAlignment="Center"
+                                                     LostFocus="TreeItemTextBox_LostFocus"
+                                                     PreviewKeyDown="TreeItemTextBox_KeyDown"
+                                                     Loaded="TreeItemTextBox_Loaded"/>
+                                        </StackPanel>
+                                    </HierarchicalDataTemplate>
+                                </TreeView.Resources>
+                                <TreeView.ItemContainerStyle>
+                                    <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
+                                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                                        <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
+                                    </Style>
+                                </TreeView.ItemContainerStyle>
+                            </TreeView>
+                        </DockPanel>
+
+                        <!-- ===== SFTP Sidebar Panel ===== -->
+                        <DockPanel Visibility="{Binding IsSftpSidebarVisible, Converter={StaticResource BoolToVis}}">
+                            <!-- SFTP toolbar: host label + refresh -->
+                            <Border DockPanel.Dock="Top" Padding="4,2"
+                                    Background="{StaticResource ToolbarBackground}"
+                                    BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,0,0,1">
+                                <DockPanel>
+                                    <Button Command="{Binding SftpSidebar.RefreshCommand}"
+                                            ToolTip="Refresh"
+                                            Style="{StaticResource MahApps.Styles.Button.Chromeless}"
+                                            Padding="4" Margin="2,0" DockPanel.Dock="Right">
+                                        <iconPacks:PackIconMaterial Kind="Refresh" Width="14" Height="14"/>
+                                    </Button>
+                                    <TextBlock Text="{Binding SftpSidebar.HostLabel}"
+                                               FontSize="11" VerticalAlignment="Center"
+                                               Foreground="#999" Margin="4,0"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </DockPanel>
+                            </Border>
+
+                            <Grid>
+                                <!-- Not connected placeholder -->
+                                <StackPanel Visibility="{Binding SftpSidebar.IsConnected, Converter={StaticResource InverseBoolToVis}}"
+                                            VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <iconPacks:PackIconMaterial Kind="FolderNetwork" Width="32" Height="32"
+                                                                Foreground="#444" HorizontalAlignment="Center"
+                                                                Margin="0,0,0,8"/>
+                                    <TextBlock Text="Connect to a server&#x0a;to browse remote files"
+                                               Foreground="#666" FontSize="12"
+                                               TextAlignment="Center" TextWrapping="Wrap"/>
+                                </StackPanel>
+
+                                <!-- Connected: SFTP tree + loading overlay -->
+                                <Grid Visibility="{Binding SftpSidebar.IsConnected, Converter={StaticResource BoolToVis}}">
+                                    <!-- SFTP TreeView -->
+                                    <TreeView x:Name="SftpTreeView"
+                                              ItemsSource="{Binding SftpSidebar.RootNodes}"
+                                              Background="Transparent" BorderThickness="0"
+                                              Padding="4"
+                                              MouseDoubleClick="SftpTree_MouseDoubleClick">
+                                        <TreeView.Resources>
+                                            <HierarchicalDataTemplate DataType="{x:Type vm:SftpTreeNode}"
+                                                                       ItemsSource="{Binding Children}">
+                                                <StackPanel Orientation="Horizontal" Margin="2">
+                                                    <StackPanel.ContextMenu>
+                                                        <ContextMenu>
+                                                            <MenuItem Header="Download" Click="SftpDownload_Click">
+                                                                <MenuItem.Icon>
+                                                                    <iconPacks:PackIconMaterial Kind="Download" Width="14" Height="14"/>
+                                                                </MenuItem.Icon>
+                                                            </MenuItem>
+                                                            <MenuItem Header="Rename" Click="SftpRename_Click">
+                                                                <MenuItem.Icon>
+                                                                    <iconPacks:PackIconMaterial Kind="RenameBox" Width="14" Height="14"/>
+                                                                </MenuItem.Icon>
+                                                            </MenuItem>
+                                                            <MenuItem Header="Delete" Click="SftpDelete_Click">
+                                                                <MenuItem.Icon>
+                                                                    <iconPacks:PackIconMaterial Kind="Delete" Width="14" Height="14"/>
+                                                                </MenuItem.Icon>
+                                                            </MenuItem>
+                                                            <Separator/>
+                                                            <MenuItem Header="New Folder" Click="SftpNewFolder_Click">
+                                                                <MenuItem.Icon>
+                                                                    <iconPacks:PackIconMaterial Kind="FolderPlus" Width="14" Height="14"/>
+                                                                </MenuItem.Icon>
+                                                            </MenuItem>
+                                                        </ContextMenu>
+                                                    </StackPanel.ContextMenu>
+                                                    <!-- Directory icon -->
+                                                    <iconPacks:PackIconMaterial Kind="Folder" Width="14" Height="14"
+                                                                                Foreground="#dca756"
+                                                                                Visibility="{Binding IsDirectory, Converter={StaticResource BoolToVis}}"
+                                                                                Margin="0,0,6,0"/>
+                                                    <!-- File icon -->
+                                                    <iconPacks:PackIconMaterial Kind="File" Width="14" Height="14"
+                                                                                Foreground="#999"
+                                                                                Visibility="{Binding IsDirectory, Converter={StaticResource InverseBoolToVis}}"
+                                                                                Margin="0,0,6,0"/>
+                                                    <!-- File name -->
+                                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                                                    <!-- File size (files only) -->
+                                                    <TextBlock Text="{Binding SizeDisplay}" VerticalAlignment="Center"
+                                                               Foreground="#666" Margin="8,0,0,0" FontSize="11"
+                                                               Visibility="{Binding IsDirectory, Converter={StaticResource InverseBoolToVis}}"/>
+                                                </StackPanel>
+                                            </HierarchicalDataTemplate>
+                                        </TreeView.Resources>
+                                        <TreeView.ItemContainerStyle>
+                                            <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
+                                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                                            </Style>
+                                        </TreeView.ItemContainerStyle>
+                                    </TreeView>
+
+                                    <!-- Loading overlay -->
+                                    <Border Background="#80252526"
+                                            Visibility="{Binding SftpSidebar.IsLoading, Converter={StaticResource BoolToVis}}"
+                                            IsHitTestVisible="False">
+                                        <mah:ProgressRing IsActive="{Binding SftpSidebar.IsLoading}"
+                                                          Width="30" Height="30"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"/>
+                                    </Border>
+                                </Grid>
+                            </Grid>
+                        </DockPanel>
+                    </Grid>
                 </DockPanel>
             </Border>
 

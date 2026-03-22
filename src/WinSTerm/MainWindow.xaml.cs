@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using MahApps.Metro.Controls;
+using MahApps.Metro.Controls.Dialogs;
 using WinSTerm.Models;
 using WinSTerm.Services;
 using WinSTerm.ViewModels;
@@ -318,5 +319,111 @@ public partial class MainWindow : MetroWindow
             Settings_Click(this, new RoutedEventArgs());
             e.Handled = true;
         }
+    }
+
+    // ===== SFTP Sidebar Event Handlers =====
+
+    private async void SftpTree_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (SftpTreeView.SelectedItem is SftpTreeNode { IsDirectory: false } node)
+        {
+            try
+            {
+                await ViewModel.SftpSidebar.DownloadAndOpenAsync(node);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Download Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+    }
+
+    private async void SftpDownload_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetSftpNodeFromMenuItem(sender) is { IsDirectory: false } node)
+        {
+            try
+            {
+                await ViewModel.SftpSidebar.DownloadAndOpenAsync(node);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Download Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+    }
+
+    private async void SftpDelete_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetSftpNodeFromMenuItem(sender) is { } node)
+        {
+            var result = MessageBox.Show(
+                $"Delete '{node.Name}'?", "Confirm Delete",
+                MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (result != MessageBoxResult.Yes) return;
+
+            try
+            {
+                await ViewModel.SftpSidebar.DeleteNodeAsync(node);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Delete Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+    }
+
+    private async void SftpRename_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetSftpNodeFromMenuItem(sender) is { } node)
+        {
+            var newName = await this.ShowInputAsync(
+                "Rename", $"Enter new name for '{node.Name}':",
+                new MetroDialogSettings { DefaultText = node.Name });
+
+            if (string.IsNullOrWhiteSpace(newName) || newName == node.Name) return;
+
+            try
+            {
+                await ViewModel.SftpSidebar.RenameNodeAsync(node, newName);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Rename Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+    }
+
+    private async void SftpNewFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var parentNode = GetSftpNodeFromMenuItem(sender);
+        // If right-clicked on a file, create folder at root
+        if (parentNode is { IsDirectory: false })
+            parentNode = null;
+
+        var folderName = await this.ShowInputAsync(
+            "New Folder", "Enter folder name:",
+            new MetroDialogSettings { DefaultText = "New Folder" });
+
+        if (string.IsNullOrWhiteSpace(folderName)) return;
+
+        try
+        {
+            await ViewModel.SftpSidebar.CreateFolderAsync(parentNode, folderName);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Create Folder Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private static SftpTreeNode? GetSftpNodeFromMenuItem(object sender)
+    {
+        if (sender is MenuItem menuItem
+            && menuItem.Parent is ContextMenu contextMenu
+            && contextMenu.PlacementTarget is FrameworkElement fe
+            && fe.DataContext is SftpTreeNode node)
+            return node;
+        return null;
     }
 }
