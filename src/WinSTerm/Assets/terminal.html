@@ -72,6 +72,24 @@
       term.open(document.getElementById('terminal'));
       fitAddon.fit();
 
+      // --- CWD detection via OSC 7 ---
+      term.parser.registerOscHandler(7, function(data) {
+        var path = data;
+        if (data.startsWith('file://')) {
+          try {
+            var url = new URL(data);
+            path = decodeURIComponent(url.pathname);
+          } catch(e) {
+            var idx = data.indexOf('/', 7);
+            if (idx >= 0) path = data.substring(idx);
+          }
+        }
+        if (path) {
+          window.chrome.webview.postMessage(JSON.stringify({ type: 'cwd', path: path }));
+        }
+        return false;
+      });
+
       // --- Welcome message ---
       term.write('\x1b[2m WinSTerm \u2013 Connecting\u2026\x1b[0m\r\n');
 

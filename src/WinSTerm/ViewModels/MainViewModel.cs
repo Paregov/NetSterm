@@ -112,6 +112,18 @@ public partial class MainViewModel : ObservableObject
     {
         if (e.PropertyName == nameof(SessionTabViewModel.IsConnected))
             UpdateSftpSidebar();
+        else if (e.PropertyName == nameof(SessionTabViewModel.CurrentRemoteDirectory))
+            OnTerminalCwdChanged();
+    }
+
+    private void OnTerminalCwdChanged()
+    {
+        if (SelectedTab == null || !SftpSidebar.IsConnected) return;
+        var path = SelectedTab.CurrentRemoteDirectory;
+        if (!string.IsNullOrEmpty(path) && path != SftpSidebar.CurrentPath)
+        {
+            _ = SftpSidebar.LoadDirectoryAsync(path);
+        }
     }
 
     private void UpdateSftpSidebar()

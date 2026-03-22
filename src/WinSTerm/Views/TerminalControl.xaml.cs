@@ -136,6 +136,12 @@ public partial class TerminalControl : UserControl
                     var rows = root.GetProperty("rows").GetUInt32();
                     _sshService?.Resize(cols, rows);
                     break;
+
+                case "cwd":
+                    var cwdPath = root.GetProperty("path").GetString();
+                    if (!string.IsNullOrEmpty(cwdPath))
+                        _sshService?.UpdateCurrentDirectory(cwdPath);
+                    break;
             }
         }
         catch (Exception ex)

@@ -12,6 +12,7 @@ public class SshConnectionService : ISshConnectionService
     private Models.ConnectionInfo? _connectionInfo;
     private volatile ManualResetEventSlim? _authResponseWait;
     private string? _authResponse;
+    private string? _currentDirectory;
 
     public bool IsConnected => _sshClient?.IsConnected == true;
     public Models.ConnectionInfo? ConnectionInfo => _connectionInfo;
@@ -20,6 +21,7 @@ public class SshConnectionService : ISshConnectionService
     public event Action<string>? DataReceived;
     public event Action? Disconnected;
     public event Action<string, bool>? AuthPromptReceived;
+    public event Action<string>? CurrentDirectoryChanged;
 
     public Task ConnectAsync(Models.ConnectionInfo info)
     {
@@ -57,6 +59,9 @@ public class SshConnectionService : ISshConnectionService
             }
 
             _shellStream = _sshClient.CreateShellStream("xterm-256color", 80, 24, 800, 600, 4096);
+
+            // Configure shell to emit OSC 7 with CWD after each command for SFTP sidebar sync
+            _shellStream.Write("export PROMPT_COMMAND='printf \"\\033]7;%s\\007\" \"$PWD\"'\n");
 
             _readCts = new CancellationTokenSource();
             StartReadLoop(_readCts.Token);
@@ -130,6 +135,15 @@ public class SshConnectionService : ISshConnectionService
         _authResponseWait?.Set();
     }
 
+    public void UpdateCurrentDirectory(string path)
+    {
+        if (!string.IsNullOrEmpty(path) && path != _currentDirectory)
+        {
+            _currentDirectory = path;
+            CurrentDirectoryChanged?.Invoke(path);
+        }
+    }
+
     public void SendData(string data)
     {
         if (_shellStream is { CanWrite: true })
@@ -168,6 +182,7 @@ public class SshConnectionService : ISshConnectionService
         }
 
         _connectionInfo = null;
+        _currentDirectory = null;
     }
 
     private void StartReadLoop(CancellationToken ct)

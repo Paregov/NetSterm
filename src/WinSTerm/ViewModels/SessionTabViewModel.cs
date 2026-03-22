@@ -10,6 +10,7 @@ public partial class SessionTabViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _isConnected;
     [ObservableProperty] private bool _isConnecting;
     [ObservableProperty] private string _statusText = "Disconnected";
+    [ObservableProperty] private string _currentRemoteDirectory = "/";
 
     public ConnectionInfo ConnectionInfo { get; }
     public SshConnectionService SshService { get; } = new();
@@ -23,6 +24,7 @@ public partial class SessionTabViewModel : ObservableObject, IDisposable
         ConnectionInfo = info;
         Title = info.Name;
         SshService.Disconnected += OnDisconnected;
+        SshService.CurrentDirectoryChanged += OnCurrentDirectoryChanged;
     }
 
     private void OnDisconnected()
@@ -31,6 +33,14 @@ public partial class SessionTabViewModel : ObservableObject, IDisposable
         {
             IsConnected = false;
             StatusText = "Connection lost";
+        });
+    }
+
+    private void OnCurrentDirectoryChanged(string path)
+    {
+        System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
+        {
+            CurrentRemoteDirectory = path;
         });
     }
 
@@ -77,6 +87,7 @@ public partial class SessionTabViewModel : ObservableObject, IDisposable
     public void Disconnect()
     {
         SshService.Disconnected -= OnDisconnected;
+        SshService.CurrentDirectoryChanged -= OnCurrentDirectoryChanged;
         SshService.Disconnect();
         SftpService.Disconnect();
         IsConnected = false;
@@ -86,6 +97,7 @@ public partial class SessionTabViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         SshService.Disconnected -= OnDisconnected;
+        SshService.CurrentDirectoryChanged -= OnCurrentDirectoryChanged;
         SshService.Dispose();
         SftpService.Dispose();
     }
