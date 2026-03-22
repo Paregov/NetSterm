@@ -131,6 +131,7 @@ public partial class TerminalControl : UserControl
         {
             try
             {
+                if (TerminalWebView.CoreWebView2 == null) return;
                 var json = JsonSerializer.Serialize(new { type = "output", data });
                 TerminalWebView.CoreWebView2.PostWebMessageAsString(json);
             }
@@ -144,6 +145,7 @@ public partial class TerminalControl : UserControl
         {
             try
             {
+                if (TerminalWebView.CoreWebView2 == null) return;
                 var msg = JsonSerializer.Serialize(new { type = "output", data = "\r\n\x1b[31m--- Connection closed ---\x1b[0m\r\n" });
                 TerminalWebView.CoreWebView2.PostWebMessageAsString(msg);
             }
@@ -153,25 +155,25 @@ public partial class TerminalControl : UserControl
 
     public async Task SearchAsync(string query)
     {
-        if (_isWebViewReady)
+        if (_isWebViewReady && TerminalWebView.CoreWebView2 != null)
             await TerminalWebView.CoreWebView2.ExecuteScriptAsync($"window.terminalSearch({JsonSerializer.Serialize(query)})");
     }
 
     public async Task SearchNextAsync()
     {
-        if (_isWebViewReady)
+        if (_isWebViewReady && TerminalWebView.CoreWebView2 != null)
             await TerminalWebView.CoreWebView2.ExecuteScriptAsync("window.terminalSearchNext()");
     }
 
     public async Task SearchPreviousAsync()
     {
-        if (_isWebViewReady)
+        if (_isWebViewReady && TerminalWebView.CoreWebView2 != null)
             await TerminalWebView.CoreWebView2.ExecuteScriptAsync("window.terminalSearchPrevious()");
     }
 
     public async Task ClearTerminalAsync()
     {
-        if (_isWebViewReady)
+        if (_isWebViewReady && TerminalWebView.CoreWebView2 != null)
             await TerminalWebView.CoreWebView2.ExecuteScriptAsync("window.terminalClear()");
     }
 
@@ -207,8 +209,12 @@ public partial class TerminalControl : UserControl
         SearchBar.Visibility = Visibility.Collapsed;
         _searchDebounceTimer.Stop();
 
-        if (_isWebViewReady)
-            await TerminalWebView.CoreWebView2.ExecuteScriptAsync("window.terminalFocus()");
+        try
+        {
+            if (_isWebViewReady && TerminalWebView.CoreWebView2 != null)
+                await TerminalWebView.CoreWebView2.ExecuteScriptAsync("window.terminalFocus()");
+        }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Hide search error: {ex.Message}"); }
     }
 
     private void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -221,31 +227,40 @@ public partial class TerminalControl : UserControl
     {
         _searchDebounceTimer.Stop();
         var query = SearchTextBox.Text;
-        if (!string.IsNullOrEmpty(query))
-            await SearchAsync(query);
+        try
+        {
+            if (!string.IsNullOrEmpty(query))
+                await SearchAsync(query);
+        }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Search debounce error: {ex.Message}"); }
     }
 
-    private void SearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    private async void SearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter)
         {
-            if ((Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
-                _ = SearchPreviousAsync();
-            else
-                _ = SearchNextAsync();
-
+            try
+            {
+                if ((Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
+                    await SearchPreviousAsync();
+                else
+                    await SearchNextAsync();
+            }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Search error: {ex.Message}"); }
             e.Handled = true;
         }
     }
 
     private async void PreviousMatchButton_Click(object sender, RoutedEventArgs e)
     {
-        await SearchPreviousAsync();
+        try { await SearchPreviousAsync(); }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Previous match error: {ex.Message}"); }
     }
 
     private async void NextMatchButton_Click(object sender, RoutedEventArgs e)
     {
-        await SearchNextAsync();
+        try { await SearchNextAsync(); }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Next match error: {ex.Message}"); }
     }
 
     private void CloseSearchButton_Click(object sender, RoutedEventArgs e)

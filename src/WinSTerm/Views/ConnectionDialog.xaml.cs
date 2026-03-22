@@ -27,19 +27,19 @@ public partial class ConnectionDialog : MetroWindow
 
     private void PasswordField_PasswordChanged(object sender, RoutedEventArgs e)
     {
-        if (sender is PasswordBox pb)
-        {
+        if (sender is PasswordBox pb && _viewModel != null)
             _viewModel.Password = pb.Password;
-        }
     }
 
     private void PasswordRadio_Checked(object sender, RoutedEventArgs e)
     {
-        _viewModel.SelectedAuthMethod = AuthMethod.Password;
+        if (_viewModel != null)
+            _viewModel.SelectedAuthMethod = AuthMethod.Password;
     }
 
     private void PrivateKeyRadio_Checked(object sender, RoutedEventArgs e)
     {
-        _viewModel.SelectedAuthMethod = AuthMethod.PrivateKey;
+        if (_viewModel != null)
+            _viewModel.SelectedAuthMethod = AuthMethod.PrivateKey;
     }
 }

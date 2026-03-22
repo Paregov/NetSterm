@@ -31,7 +31,12 @@ public partial class SftpSidebarViewModel : ObservableObject
         _sftpService = tab.SftpService;
         IsConnected = true;
         HostLabel = tab.ConnectionInfo.Host;
-        await LoadRootAsync();
+        try { await LoadRootAsync(); }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"SFTP sidebar load error: {ex.Message}");
+            IsConnected = false;
+        }
     }
 
     private void Detach()
@@ -184,7 +189,10 @@ public partial class SftpSidebarViewModel : ObservableObject
     private async void OnNodeExpandRequested(object? sender, EventArgs e)
     {
         if (sender is SftpTreeNode node)
-            await LoadChildrenAsync(node);
+        {
+            try { await LoadChildrenAsync(node); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"SFTP expand error: {ex.Message}"); }
+        }
     }
 
     private void RemoveNodeFromTree(SftpTreeNode target)
