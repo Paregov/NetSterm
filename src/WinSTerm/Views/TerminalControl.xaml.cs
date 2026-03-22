@@ -47,6 +47,13 @@ public partial class TerminalControl : UserControl
             TerminalWebView.CoreWebView2.NavigationCompleted += (s, args) =>
             {
                 _isWebViewReady = true;
+
+                // TODO: Apply terminal settings (font, fontSize, scrollback, cursor) from
+                // SettingsService.Instance.Current here by sending a JSON message to xterm.js.
+                // Also subscribe to SettingsService.Instance.SettingsChanged to apply changes
+                // at runtime when the user modifies settings. This requires adding a
+                // 'applySettings' message handler in terminal.html.
+
                 Dispatcher.BeginInvoke(() =>
                     TerminalWebView.CoreWebView2.ExecuteScriptAsync("window.terminalFocus()"));
             };

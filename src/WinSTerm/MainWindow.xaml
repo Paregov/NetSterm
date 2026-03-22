@@ -40,6 +40,12 @@
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator/>
+                <MenuItem Header="_Settings" Click="Settings_Click" InputGestureText="Ctrl+,">
+                    <MenuItem.Icon>
+                        <iconPacks:PackIconMaterial Kind="Cog" Width="14" Height="14"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <Separator/>
                 <MenuItem Header="E_xit" Click="Exit_Click"/>
             </MenuItem>
             <MenuItem Header="_Sessions">
@@ -224,20 +230,120 @@
                             Background="Transparent"
                             BorderThickness="0"
                             Visibility="{Binding SelectedTab, Converter={StaticResource NullToCollapsed}}">
+
+                    <!-- Custom TabControl template with "+" button -->
+                    <TabControl.Template>
+                        <ControlTemplate TargetType="TabControl">
+                            <Grid ClipToBounds="True" SnapsToDevicePixels="True"
+                                  KeyboardNavigation.TabNavigation="Local">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <!-- Tab header strip -->
+                                <Border Grid.Row="0"
+                                        Background="{StaticResource ToolbarBackground}"
+                                        BorderBrush="{StaticResource SidebarBorder}"
+                                        BorderThickness="0,0,0,1">
+                                    <DockPanel>
+                                        <!-- New tab button -->
+                                        <Button DockPanel.Dock="Right"
+                                                Click="NewTabButton_Click"
+                                                ToolTip="New Connection"
+                                                Style="{StaticResource MahApps.Styles.Button.Chromeless}"
+                                                Padding="6,4" Margin="2"
+                                                VerticalAlignment="Center">
+                                            <iconPacks:PackIconMaterial Kind="Plus" Width="12" Height="12"
+                                                                        Foreground="{StaticResource AccentBlueBrush}"/>
+                                        </Button>
+                                        <!-- Tab headers -->
+                                        <TabPanel x:Name="HeaderPanel"
+                                                  IsItemsHost="True"
+                                                  Panel.ZIndex="1"
+                                                  KeyboardNavigation.TabIndex="1"
+                                                  Margin="0,2,0,0"/>
+                                    </DockPanel>
+                                </Border>
+                                <!-- Tab content -->
+                                <Border Grid.Row="1" Background="Transparent" BorderThickness="0">
+                                    <ContentPresenter x:Name="PART_SelectedContentHost"
+                                                      ContentSource="SelectedContent"
+                                                      Margin="0"/>
+                                </Border>
+                            </Grid>
+                        </ControlTemplate>
+                    </TabControl.Template>
+
+                    <!-- Tab item container style with hover effect -->
+                    <TabControl.ItemContainerStyle>
+                        <Style TargetType="TabItem" BasedOn="{StaticResource {x:Type TabItem}}">
+                            <Setter Property="Padding" Value="4,4"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#2a2d2e"/>
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="#1e1e1e"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TabControl.ItemContainerStyle>
+
                     <!-- Tab Header Template -->
                     <TabControl.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Orientation="Horizontal" Margin="2,0">
+                            <StackPanel x:Name="TabHeader" Orientation="Horizontal" Margin="2,0">
+                                <StackPanel.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Close" Click="TabClose_Click">
+                                            <MenuItem.Icon>
+                                                <iconPacks:PackIconMaterial Kind="Close" Width="14" Height="14"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Close Others" Click="TabCloseOthers_Click"/>
+                                        <MenuItem Header="Close All" Click="TabCloseAll_Click"/>
+                                        <MenuItem Header="Close Tabs to the Right" Click="TabCloseToRight_Click"/>
+                                        <Separator/>
+                                        <MenuItem Header="Duplicate" Click="TabDuplicate_Click">
+                                            <MenuItem.Icon>
+                                                <iconPacks:PackIconMaterial Kind="ContentCopy" Width="14" Height="14"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <Separator/>
+                                        <MenuItem Header="Reconnect" Click="TabReconnect_Click">
+                                            <MenuItem.Icon>
+                                                <iconPacks:PackIconMaterial Kind="Refresh" Width="14" Height="14"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                    </ContextMenu>
+                                </StackPanel.ContextMenu>
                                 <!-- Status dot -->
                                 <Ellipse Width="8" Height="8" Margin="0,0,6,0"
                                          Fill="{Binding IsConnected, Converter={StaticResource StatusToColor}}"/>
                                 <TextBlock Text="{Binding Title}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <!-- Close button -->
-                                <Button Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=TabControl}}"
+                                <!-- Close button: visible on hover or when selected -->
+                                <Button x:Name="CloseBtn"
+                                        Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=TabControl}}"
                                         CommandParameter="{Binding}"
-                                        Style="{StaticResource MahApps.Styles.Button.Chromeless}"
                                         ToolTip="Close" Padding="2"
                                         Width="18" Height="18">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource MahApps.Styles.Button.Chromeless}">
+                                            <Setter Property="Opacity" Value="0"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=TabItem}}" Value="True">
+                                                    <Setter Property="Opacity" Value="0.7"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsMouseOver, ElementName=TabHeader}" Value="True">
+                                                    <Setter Property="Opacity" Value="0.7"/>
+                                                </DataTrigger>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Opacity" Value="1"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
                                     <iconPacks:PackIconMaterial Kind="Close" Width="10" Height="10"/>
                                 </Button>
                             </StackPanel>

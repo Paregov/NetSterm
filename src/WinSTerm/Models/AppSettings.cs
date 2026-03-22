@@ -1,0 +1,45 @@
+namespace WinSTerm.Models;
+
+public class AppSettings
+{
+    // Terminal
+    public string FontFamily { get; set; } = "Cascadia Code";
+    public int FontSize { get; set; } = 14;
+    public int ScrollbackLines { get; set; } = 10000;
+    public string CursorStyle { get; set; } = "block";
+    public bool CursorBlink { get; set; } = true;
+
+    // SSH Defaults
+    public int DefaultKeepAliveSeconds { get; set; } = 30;
+    public int ConnectionTimeoutSeconds { get; set; } = 15;
+    public bool DefaultCompression { get; set; }
+
+    // Appearance
+    public bool ShowStatusBar { get; set; } = true;
+    public bool ConfirmOnCloseTab { get; set; }
+    public bool ConfirmOnExit { get; set; } = true;
+
+    // SFTP
+    public string DefaultLocalDirectory { get; set; } = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+    public bool ShowHiddenFiles { get; set; }
+
+    public AppSettings Clone()
+    {
+        return new AppSettings
+        {
+            FontFamily = FontFamily,
+            FontSize = FontSize,
+            ScrollbackLines = ScrollbackLines,
+            CursorStyle = CursorStyle,
+            CursorBlink = CursorBlink,
+            DefaultKeepAliveSeconds = DefaultKeepAliveSeconds,
+            ConnectionTimeoutSeconds = ConnectionTimeoutSeconds,
+            DefaultCompression = DefaultCompression,
+            ShowStatusBar = ShowStatusBar,
+            ConfirmOnCloseTab = ConfirmOnCloseTab,
+            ConfirmOnExit = ConfirmOnExit,
+            DefaultLocalDirectory = DefaultLocalDirectory,
+            ShowHiddenFiles = ShowHiddenFiles
+        };
+    }
+}

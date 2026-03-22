@@ -143,8 +143,102 @@ public partial class MainWindow : MetroWindow
         }
     }
 
+    private void NewTabButton_Click(object sender, RoutedEventArgs e)
+    {
+        NewConnection_Click(sender, e);
+    }
+
+    private void TabClose_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetTabFromContextMenu(sender) is { } tab)
+            ViewModel.CloseTabCommand.Execute(tab);
+    }
+
+    private void TabCloseOthers_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetTabFromContextMenu(sender) is { } tab)
+            ViewModel.CloseOtherTabs(tab);
+    }
+
+    private void TabCloseAll_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.CloseAllTabs();
+    }
+
+    private void TabCloseToRight_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetTabFromContextMenu(sender) is { } tab)
+            ViewModel.CloseTabsToRight(tab);
+    }
+
+    private void TabDuplicate_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetTabFromContextMenu(sender) is { } tab)
+            ViewModel.DuplicateTab(tab);
+    }
+
+    private async void TabReconnect_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetTabFromContextMenu(sender) is not { } tab) return;
+        if (tab.IsConnected) return;
+
+        try
+        {
+            string? password = null;
+            var info = tab.ConnectionInfo;
+
+            if (info.AuthMethod == AuthMethod.Password)
+            {
+                if (!string.IsNullOrEmpty(info.EncryptedPassword))
+                {
+                    try { password = ConnectionStorageService.DecryptPassword(info.EncryptedPassword); }
+                    catch { password = null; }
+                }
+
+                if (password == null)
+                {
+                    var pwdDialog = new PasswordDialog(info.Username, info.Host) { Owner = this };
+                    if (pwdDialog.ShowDialog() != true) return;
+                    password = pwdDialog.EnteredPassword;
+                }
+            }
+
+            await tab.ConnectAsync(password);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Reconnect Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private static SessionTabViewModel? GetTabFromContextMenu(object sender)
+    {
+        if (sender is MenuItem menuItem
+            && menuItem.Parent is ContextMenu contextMenu
+            && contextMenu.PlacementTarget is FrameworkElement fe)
+            return fe.DataContext as SessionTabViewModel;
+        return null;
+    }
+
     private void Exit_Click(object sender, RoutedEventArgs e)
     {
         Application.Current.Shutdown();
+    }
+
+    private void Settings_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SettingsDialog { Owner = this };
+        dialog.ShowDialog();
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+
+        if (e.Key == Key.OemComma && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+        {
+            Settings_Click(this, new RoutedEventArgs());
+            e.Handled = true;
+        }
     }
 }

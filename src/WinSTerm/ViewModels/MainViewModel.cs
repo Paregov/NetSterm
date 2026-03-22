@@ -141,6 +141,60 @@ public partial class MainViewModel : ObservableObject
         StatusMessage = "Ready";
     }
 
+    public void CloseOtherTabs(SessionTabViewModel tab)
+    {
+        var others = Tabs.Where(t => t != tab).ToList();
+        foreach (var t in others)
+        {
+            t.Disconnect();
+            t.Dispose();
+            Tabs.Remove(t);
+        }
+        SelectedTab = tab;
+        ConnectionCount = Tabs.Count;
+        StatusMessage = "Ready";
+    }
+
+    public void CloseAllTabs()
+    {
+        var all = Tabs.ToList();
+        foreach (var t in all)
+        {
+            t.Disconnect();
+            t.Dispose();
+        }
+        Tabs.Clear();
+        SelectedTab = null;
+        ConnectionCount = 0;
+        StatusMessage = "Ready";
+    }
+
+    public void CloseTabsToRight(SessionTabViewModel tab)
+    {
+        var index = Tabs.IndexOf(tab);
+        if (index < 0) return;
+
+        var toClose = Tabs.Skip(index + 1).ToList();
+        foreach (var t in toClose)
+        {
+            t.Disconnect();
+            t.Dispose();
+            Tabs.Remove(t);
+        }
+        ConnectionCount = Tabs.Count;
+        if (SelectedTab == null || !Tabs.Contains(SelectedTab))
+            SelectedTab = tab;
+    }
+
+    public void DuplicateTab(SessionTabViewModel tab)
+    {
+        var newTab = new SessionTabViewModel(tab.ConnectionInfo);
+        Tabs.Add(newTab);
+        SelectedTab = newTab;
+        ConnectionCount = Tabs.Count;
+        StatusMessage = $"Duplicated tab for {tab.ConnectionInfo.Host}";
+    }
+
     [RelayCommand]
     private void AddFolder()
     {
