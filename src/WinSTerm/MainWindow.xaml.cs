@@ -171,21 +171,14 @@ public partial class MainWindow : MetroWindow
 
         string? password = null;
 
-        if (info.AuthMethod == AuthMethod.Password)
+        if (info.AuthMethod == AuthMethod.Password && !string.IsNullOrEmpty(info.EncryptedPassword))
         {
-            if (!string.IsNullOrEmpty(info.EncryptedPassword))
-            {
-                try { password = ConnectionStorageService.DecryptPassword(info.EncryptedPassword); }
-                catch { password = null; }
-            }
-
-            if (password == null)
-            {
-                var pwdDialog = new PasswordDialog(info.Username, info.Host) { Owner = this };
-                if (pwdDialog.ShowDialog() != true) return;
-                password = pwdDialog.EnteredPassword;
-            }
+            try { password = ConnectionStorageService.DecryptPassword(info.EncryptedPassword); }
+            catch { password = null; }
         }
+
+        // No PasswordDialog popup — when password is null, the SSH service uses
+        // keyboard-interactive auth and the prompt appears in the terminal.
 
         try
         {
@@ -298,21 +291,13 @@ public partial class MainWindow : MetroWindow
             string? password = null;
             var info = tab.ConnectionInfo;
 
-            if (info.AuthMethod == AuthMethod.Password)
+            if (info.AuthMethod == AuthMethod.Password && !string.IsNullOrEmpty(info.EncryptedPassword))
             {
-                if (!string.IsNullOrEmpty(info.EncryptedPassword))
-                {
-                    try { password = ConnectionStorageService.DecryptPassword(info.EncryptedPassword); }
-                    catch { password = null; }
-                }
-
-                if (password == null)
-                {
-                    var pwdDialog = new PasswordDialog(info.Username, info.Host) { Owner = this };
-                    if (pwdDialog.ShowDialog() != true) return;
-                    password = pwdDialog.EnteredPassword;
-                }
+                try { password = ConnectionStorageService.DecryptPassword(info.EncryptedPassword); }
+                catch { password = null; }
             }
+
+            // No PasswordDialog popup — keyboard-interactive handles it in the terminal.
 
             await tab.ConnectAsync(password);
         }

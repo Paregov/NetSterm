@@ -1,4 +1,5 @@
 using Renci.SshNet;
+using Renci.SshNet.Common;
 using WinSTerm.Models;
 
 namespace WinSTerm.Services;
@@ -9,12 +10,16 @@ public class SshConnectionService : ISshConnectionService
     private ShellStream? _shellStream;
     private CancellationTokenSource? _readCts;
     private Models.ConnectionInfo? _connectionInfo;
+    private volatile ManualResetEventSlim? _authResponseWait;
+    private string? _authResponse;
 
     public bool IsConnected => _sshClient?.IsConnected == true;
     public Models.ConnectionInfo? ConnectionInfo => _connectionInfo;
+    public string? LastAuthResponse { get; private set; }
 
     public event Action<string>? DataReceived;
     public event Action? Disconnected;
+    public event Action<string, bool>? AuthPromptReceived;
 
     public Task ConnectAsync(Models.ConnectionInfo info)
     {
@@ -26,8 +31,9 @@ public class SshConnectionService : ISshConnectionService
         return Task.Run(() =>
         {
             _connectionInfo = info;
+            LastAuthResponse = null;
 
-            var connInfo = ConnectionFactory.Create(info, plainPassword);
+            var connInfo = ConnectionFactory.Create(info, plainPassword, ConfigureKeyboardInteractive);
             _sshClient = new SshClient(connInfo);
             _sshClient.Connect();
 
@@ -36,6 +42,52 @@ public class SshConnectionService : ISshConnectionService
             _readCts = new CancellationTokenSource();
             StartReadLoop(_readCts.Token);
         });
+    }
+
+    private void ConfigureKeyboardInteractive(KeyboardInteractiveAuthenticationMethod kbdInteractive)
+    {
+        kbdInteractive.AuthenticationPrompt += OnKeyboardInteractivePrompt;
+    }
+
+    private void OnKeyboardInteractivePrompt(object? sender, AuthenticationPromptEventArgs e)
+    {
+        for (int i = 0; i < e.Prompts.Count; i++)
+        {
+            var prompt = e.Prompts[i];
+            var waitHandle = new ManualResetEventSlim(false);
+            _authResponseWait = waitHandle;
+            _authResponse = null;
+
+            var displayText = prompt.Request;
+            if (i == 0 && !string.IsNullOrEmpty(e.Instruction))
+            {
+                displayText = e.Instruction + "\r\n" + displayText;
+            }
+
+            AuthPromptReceived?.Invoke(displayText, !prompt.IsEchoed);
+
+            try
+            {
+                if (!waitHandle.Wait(TimeSpan.FromSeconds(60)))
+                {
+                    throw new TimeoutException("Authentication prompt timed out waiting for user input.");
+                }
+            }
+            finally
+            {
+                _authResponseWait = null;
+                waitHandle.Dispose();
+            }
+
+            prompt.Response = _authResponse ?? "";
+        }
+    }
+
+    public void ProvideAuthResponse(string response)
+    {
+        _authResponse = response;
+        LastAuthResponse = response;
+        _authResponseWait?.Set();
     }
 
     public void SendData(string data)
@@ -55,6 +107,10 @@ public class SshConnectionService : ISshConnectionService
     public void Disconnect()
     {
         _readCts?.Cancel();
+
+        // Unblock any waiting auth prompt so the SSH thread does not hang
+        try { _authResponseWait?.Set(); }
+        catch (ObjectDisposedException) { }
 
         if (_shellStream != null)
         {

@@ -15,6 +15,9 @@ public partial class TerminalControl : UserControl
     private SshConnectionService? _sshService;
     private bool _isWebViewReady;
     private bool _isSearchVisible;
+    private bool _isAuthMode;
+    private bool _authEchoOff;
+    private string _authBuffer = "";
     private readonly DispatcherTimer _searchDebounceTimer;
 
     public TerminalControl()
@@ -31,7 +34,11 @@ public partial class TerminalControl : UserControl
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
         if (DataContext is SessionTabViewModel tab)
+        {
             AttachSshService(tab.SshService);
+            if (_isWebViewReady)
+                tab.TerminalReady.TrySetResult(true);
+        }
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -47,6 +54,9 @@ public partial class TerminalControl : UserControl
             TerminalWebView.CoreWebView2.NavigationCompleted += (s, args) =>
             {
                 _isWebViewReady = true;
+
+                if (DataContext is SessionTabViewModel tabVm)
+                    tabVm.TerminalReady.TrySetResult(true);
 
                 // TODO: Apply terminal settings (font, fontSize, scrollback, cursor) from
                 // SettingsService.Instance.Current here by sending a JSON message to xterm.js.
@@ -65,7 +75,11 @@ public partial class TerminalControl : UserControl
 
         // Wire up if DataContext is already set when we load
         if (DataContext is SessionTabViewModel tab)
+        {
             AttachSshService(tab.SshService);
+            if (_isWebViewReady)
+                tab.TerminalReady.TrySetResult(true);
+        }
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
@@ -79,6 +93,7 @@ public partial class TerminalControl : UserControl
         _sshService = sshService;
         _sshService.DataReceived += OnSshDataReceived;
         _sshService.Disconnected += OnSshDisconnected;
+        _sshService.AuthPromptReceived += OnAuthPrompt;
     }
 
     private void DetachSshService()
@@ -87,6 +102,7 @@ public partial class TerminalControl : UserControl
         {
             _sshService.DataReceived -= OnSshDataReceived;
             _sshService.Disconnected -= OnSshDisconnected;
+            _sshService.AuthPromptReceived -= OnAuthPrompt;
             _sshService = null;
         }
     }
@@ -107,7 +123,12 @@ public partial class TerminalControl : UserControl
                 case "input":
                     var data = root.GetProperty("data").GetString();
                     if (data != null)
-                        _sshService?.SendData(data);
+                    {
+                        if (_isAuthMode)
+                            HandleAuthInput(data);
+                        else
+                            _sshService?.SendData(data);
+                    }
                     break;
 
                 case "resize":
@@ -151,6 +172,62 @@ public partial class TerminalControl : UserControl
             }
             catch { }
         });
+    }
+
+    private void OnAuthPrompt(string promptText, bool isEchoOff)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            _isAuthMode = true;
+            _authEchoOff = isEchoOff;
+            _authBuffer = "";
+            WriteToTerminal(promptText);
+        });
+    }
+
+    private void HandleAuthInput(string data)
+    {
+        foreach (var ch in data)
+        {
+            if (ch == '\r' || ch == '\n')
+            {
+                WriteToTerminal("\r\n");
+                _isAuthMode = false;
+                _sshService?.ProvideAuthResponse(_authBuffer);
+                _authBuffer = "";
+                return;
+            }
+
+            if (ch == '\x7f' || ch == '\b')
+            {
+                if (_authBuffer.Length > 0)
+                {
+                    _authBuffer = _authBuffer[..^1];
+                    if (!_authEchoOff)
+                        WriteToTerminal("\b \b");
+                }
+                continue;
+            }
+
+            if (ch < ' ')
+                continue;
+
+            _authBuffer += ch;
+            if (!_authEchoOff)
+                WriteToTerminal(ch.ToString());
+        }
+    }
+
+    private void WriteToTerminal(string text)
+    {
+        if (!_isWebViewReady || TerminalWebView.CoreWebView2 == null) return;
+
+        try
+        {
+            var json = JsonSerializer.Serialize(new { type = "output", data = text });
+            TerminalWebView.CoreWebView2.PostWebMessageAsString(json);
+        }
+        catch { /* WebView may be disposed */ }
     }
 
     public async Task SearchAsync(string query)

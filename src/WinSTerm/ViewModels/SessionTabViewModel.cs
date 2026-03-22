@@ -16,6 +16,7 @@ public partial class SessionTabViewModel : ObservableObject, IDisposable
     public SftpService SftpService { get; } = new();
     public SftpBrowserViewModel SftpBrowserViewModel { get; } = new();
     public string TabId { get; } = Guid.NewGuid().ToString();
+    public TaskCompletionSource<bool> TerminalReady { get; } = new();
 
     public SessionTabViewModel(ConnectionInfo info)
     {
@@ -40,14 +41,20 @@ public partial class SessionTabViewModel : ObservableObject, IDisposable
             IsConnecting = true;
             StatusText = "Connecting...";
 
+            // Wait for terminal WebView2 to initialize before connecting.
+            // Keyboard-interactive auth prompts write to the terminal during connect.
+            await TerminalReady.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
             await SshService.ConnectAsync(ConnectionInfo, password);
             IsConnected = true;
             StatusText = $"Connected to {ConnectionInfo.Host}";
 
-            // Also connect SFTP
+            // Connect SFTP using the provided password or the one captured
+            // from keyboard-interactive authentication.
             try
             {
-                await SftpService.ConnectAsync(ConnectionInfo, password);
+                var sftpPassword = password ?? SshService.LastAuthResponse;
+                await SftpService.ConnectAsync(ConnectionInfo, sftpPassword);
                 SftpBrowserViewModel.AttachService(SftpService);
             }
             catch { /* SFTP is optional - don't fail the session */ }
