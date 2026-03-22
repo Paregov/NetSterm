@@ -109,6 +109,44 @@ public partial class MainWindow : Window
         ViewModel.AddFolderWithInPlaceEdit(null);
     }
 
+    // ===== Sessions Toolbar Handlers =====
+
+    private void AddFolder_Click(object? sender, RoutedEventArgs e)
+    {
+        var parentFolderId = GetSelectedFolderId();
+        ViewModel.AddFolderWithInPlaceEdit(parentFolderId);
+    }
+
+    private async void AddConnection_Click(object? sender, RoutedEventArgs e)
+    {
+        var parentFolderId = GetSelectedFolderId();
+        var dialog = new ConnectionDialog();
+        await dialog.ShowDialog(this);
+        if (dialog.Result != null)
+        {
+            if (parentFolderId != null)
+                dialog.Result.FolderId = parentFolderId;
+            ViewModel.SaveConnection(dialog.Result);
+        }
+    }
+
+    /// <summary>
+    /// Gets the folder ID based on current session tree selection.
+    /// If a folder is selected, returns its ID.
+    /// If a connection is selected, returns its parent folder ID.
+    /// If nothing is selected, returns null (root level).
+    /// </summary>
+    private string? GetSelectedFolderId()
+    {
+        if (SessionTreeView.SelectedItem is SessionTreeItem item)
+        {
+            if (item.IsFolder)
+                return item.Id;
+            return item.ConnectionInfo?.FolderId;
+        }
+        return null;
+    }
+
     private async void NewConnectionInFolder_Click(object? sender, RoutedEventArgs e)
     {
         if (GetTreeItemFromMenuItem(sender) is { IsFolder: true } folder)
@@ -636,19 +674,38 @@ public partial class MainWindow : Window
 
     // ===== Snippets Sidebar Event Handlers =====
 
+    /// <summary>
+    /// Gets the folder ID based on current snippet tree selection.
+    /// If a folder is selected, returns its ID.
+    /// If a snippet is selected, returns its parent folder ID.
+    /// If nothing is selected, returns null (root level).
+    /// </summary>
+    private string? GetSelectedSnippetFolderId()
+    {
+        if (SnippetTreeView.SelectedItem is SnippetTreeItem item)
+        {
+            if (item.IsFolder)
+                return item.Id;
+            return item.Snippet?.FolderId;
+        }
+        return null;
+    }
+
     private async void AddSnippet_Click(object? sender, RoutedEventArgs e)
     {
+        var parentFolderId = GetSelectedSnippetFolderId();
         var dialog = new SnippetEditDialog();
         await dialog.ShowDialog(this);
         if (dialog.Result != null)
         {
-            ViewModel.SnippetsSidebar.AddSnippet(dialog.Result);
+            ViewModel.SnippetsSidebar.AddSnippet(dialog.Result, parentFolderId);
         }
     }
 
     private void AddSnippetFolder_Click(object? sender, RoutedEventArgs e)
     {
-        ViewModel.SnippetsSidebar.AddFolderWithInPlaceEdit(null);
+        var parentFolderId = GetSelectedSnippetFolderId();
+        ViewModel.SnippetsSidebar.AddFolderWithInPlaceEdit(parentFolderId);
     }
 
     private async void AddSnippetFromTree_Click(object? sender, RoutedEventArgs e)

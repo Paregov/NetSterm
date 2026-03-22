@@ -273,10 +273,15 @@
                                     Background="{StaticResource ToolbarBackground}"
                                     BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,0,0,1">
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                    <Button Command="{Binding AddFolderCommand}" ToolTip.Tip="New Folder"
+                                    <Button ToolTip.Tip="New Folder" Click="AddFolder_Click"
                                             Classes="chromeless"
                                             Padding="4" Margin="2,0">
                                         <mi:MaterialIcon Kind="FolderPlus" Width="14" Height="14"/>
+                                    </Button>
+                                    <Button ToolTip.Tip="Add Connection" Click="AddConnection_Click"
+                                            Classes="chromeless"
+                                            Padding="4" Margin="2,0">
+                                        <mi:MaterialIcon Kind="Plus" Width="14" Height="14"/>
                                     </Button>
                                 </StackPanel>
                             </Border>
