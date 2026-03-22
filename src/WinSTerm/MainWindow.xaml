@@ -187,9 +187,11 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <RadioButton Grid.Column="0" GroupName="SidebarTab"
-                                         IsChecked="{Binding IsSftpSidebarVisible, Converter={StaticResource InverseBool}}"
+                                         IsChecked="{Binding IsSessionsSidebarVisible, Mode=OneWay}"
+                                         Checked="SessionsTab_Checked"
                                          Style="{StaticResource SidebarTabStyle}">
                                 <StackPanel Orientation="Horizontal">
                                     <iconPacks:PackIconMaterial Kind="FolderAccount" Width="12" Height="12" Margin="0,0,4,0"/>
@@ -197,11 +199,21 @@
                                 </StackPanel>
                             </RadioButton>
                             <RadioButton Grid.Column="1" GroupName="SidebarTab"
-                                         IsChecked="{Binding IsSftpSidebarVisible}"
+                                         IsChecked="{Binding IsSftpSidebarVisible, Mode=OneWay}"
+                                         Checked="SftpTab_Checked"
                                          Style="{StaticResource SidebarTabStyle}">
                                 <StackPanel Orientation="Horizontal">
                                     <iconPacks:PackIconMaterial Kind="FolderNetwork" Width="12" Height="12" Margin="0,0,4,0"/>
                                     <TextBlock Text="SFTP" FontSize="12"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton Grid.Column="2" GroupName="SidebarTab"
+                                         IsChecked="{Binding IsSnippetsSidebarVisible, Mode=OneWay}"
+                                         Checked="SnippetsTab_Checked"
+                                         Style="{StaticResource SidebarTabStyle}">
+                                <StackPanel Orientation="Horizontal">
+                                    <iconPacks:PackIconMaterial Kind="CodeBraces" Width="12" Height="12" Margin="0,0,4,0"/>
+                                    <TextBlock Text="Snippets" FontSize="12"/>
                                 </StackPanel>
                             </RadioButton>
                         </Grid>
@@ -210,7 +222,7 @@
                     <!-- Content area: Sessions and SFTP panels overlaid -->
                     <Grid>
                         <!-- ===== Sessions Panel ===== -->
-                        <DockPanel Visibility="{Binding IsSftpSidebarVisible, Converter={StaticResource InverseBoolToVis}}">
+                        <DockPanel Visibility="{Binding IsSessionsSidebarVisible, Converter={StaticResource BoolToVis}}">
                             <!-- Sessions toolbar -->
                             <Border DockPanel.Dock="Top" Padding="4,2"
                                     Background="{StaticResource ToolbarBackground}"
@@ -433,6 +445,74 @@
                                     </Border>
                                 </Grid>
                             </Grid>
+                        </DockPanel>
+
+                        <!-- ===== Snippets Sidebar Panel ===== -->
+                        <DockPanel Visibility="{Binding IsSnippetsSidebarVisible, Converter={StaticResource BoolToVis}}">
+                            <!-- Snippets toolbar -->
+                            <Border DockPanel.Dock="Top" Padding="4,2"
+                                    Background="{StaticResource ToolbarBackground}"
+                                    BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,0,0,1">
+                                <DockPanel>
+                                    <Button ToolTip="Add Snippet" Click="AddSnippet_Click"
+                                            Style="{StaticResource MahApps.Styles.Button.Chromeless}"
+                                            Padding="4" Margin="2,0" DockPanel.Dock="Right">
+                                        <iconPacks:PackIconMaterial Kind="Plus" Width="14" Height="14"/>
+                                    </Button>
+                                    <TextBlock Text="Command Snippets"
+                                               FontSize="11" VerticalAlignment="Center"
+                                               Foreground="#999" Margin="4,0"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </DockPanel>
+                            </Border>
+
+                            <!-- Snippet list -->
+                            <ListBox ItemsSource="{Binding SnippetsSidebar.Snippets}"
+                                     Background="Transparent" BorderThickness="0"
+                                     Padding="4"
+                                     MouseDoubleClick="SnippetList_MouseDoubleClick">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                        <Setter Property="Padding" Value="4,2"/>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Margin="2">
+                                            <StackPanel.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Execute" Click="ExecuteSnippet_Click">
+                                                        <MenuItem.Icon>
+                                                            <iconPacks:PackIconMaterial Kind="Play" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <MenuItem Header="Edit" Click="EditSnippet_Click">
+                                                        <MenuItem.Icon>
+                                                            <iconPacks:PackIconMaterial Kind="Pencil" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <Separator/>
+                                                    <MenuItem Header="Delete" Click="DeleteSnippet_Click">
+                                                        <MenuItem.Icon>
+                                                            <iconPacks:PackIconMaterial Kind="Delete" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                </ContextMenu>
+                                            </StackPanel.ContextMenu>
+                                            <!-- Snippet name -->
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                            <!-- Command preview (truncated) -->
+                                            <TextBlock Text="{Binding Command}" Foreground="#999" FontSize="11"
+                                                       TextTrimming="CharacterEllipsis" FontFamily="Consolas"/>
+                                            <!-- Description if present -->
+                                            <TextBlock Text="{Binding Description}" Foreground="#666" FontSize="10"
+                                                       Visibility="{Binding Description, Converter={StaticResource NullToCollapsed}}"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
                         </DockPanel>
                     </Grid>
                 </DockPanel>

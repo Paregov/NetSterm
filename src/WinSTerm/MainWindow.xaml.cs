@@ -502,4 +502,79 @@ public partial class MainWindow : MetroWindow
             return node;
         return null;
     }
+
+    // ===== Sidebar Tab Switching =====
+
+    private void SessionsTab_Checked(object sender, RoutedEventArgs e)
+    {
+        _viewModel?.SetActiveSidebar("Sessions");
+    }
+
+    private void SftpTab_Checked(object sender, RoutedEventArgs e)
+    {
+        _viewModel?.SetActiveSidebar("SFTP");
+    }
+
+    private void SnippetsTab_Checked(object sender, RoutedEventArgs e)
+    {
+        _viewModel?.SetActiveSidebar("Snippets");
+    }
+
+    // ===== Snippets Sidebar Event Handlers =====
+
+    private void AddSnippet_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SnippetEditDialog { Owner = this };
+        if (dialog.ShowDialog() == true && dialog.Result != null)
+        {
+            ViewModel.SnippetsSidebar.AddSnippet(dialog.Result);
+        }
+    }
+
+    private void EditSnippet_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetSnippetFromMenuItem(sender) is not { } snippet) return;
+
+        var dialog = new SnippetEditDialog(snippet) { Owner = this };
+        if (dialog.ShowDialog() == true && dialog.Result != null)
+        {
+            ViewModel.SnippetsSidebar.UpdateSnippet(dialog.Result);
+        }
+    }
+
+    private void DeleteSnippet_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetSnippetFromMenuItem(sender) is not { } snippet) return;
+
+        var result = MessageBox.Show(
+            $"Delete snippet '{snippet.Name}'?", "Confirm Delete",
+            MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (result == MessageBoxResult.Yes)
+            ViewModel.SnippetsSidebar.DeleteSnippet(snippet);
+    }
+
+    private void ExecuteSnippet_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetSnippetFromMenuItem(sender) is { } snippet)
+            ViewModel.SnippetsSidebar.ExecuteSnippet(snippet);
+    }
+
+    private void SnippetList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is System.Windows.Controls.ListBox listBox
+            && listBox.SelectedItem is CommandSnippet snippet)
+        {
+            ViewModel.SnippetsSidebar.ExecuteSnippet(snippet);
+        }
+    }
+
+    private static CommandSnippet? GetSnippetFromMenuItem(object sender)
+    {
+        if (sender is MenuItem menuItem
+            && menuItem.Parent is ContextMenu contextMenu
+            && contextMenu.PlacementTarget is FrameworkElement fe
+            && fe.DataContext is CommandSnippet snippet)
+            return snippet;
+        return null;
+    }
 }

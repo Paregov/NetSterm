@@ -27,7 +27,16 @@ public partial class MainViewModel : ObservableObject
 
     // SFTP sidebar
     public SftpSidebarViewModel SftpSidebar { get; } = new();
-    [ObservableProperty] private bool _isSftpSidebarVisible;
+
+    // Snippets sidebar
+    public SnippetsSidebarViewModel SnippetsSidebar { get; }
+
+    // Active sidebar tab: "Sessions", "SFTP", or "Snippets"
+    [ObservableProperty] private string _activeSidebar = "Sessions";
+
+    public bool IsSessionsSidebarVisible => ActiveSidebar == "Sessions";
+    public bool IsSftpSidebarVisible => ActiveSidebar == "SFTP";
+    public bool IsSnippetsSidebarVisible => ActiveSidebar == "Snippets";
 
     // Quick connect fields
     [ObservableProperty] private string _quickHost = "";
@@ -40,7 +49,29 @@ public partial class MainViewModel : ObservableObject
 
     public MainViewModel()
     {
+        SnippetsSidebar = new SnippetsSidebarViewModel();
+        SnippetsSidebar.SnippetExecuteRequested += OnSnippetExecuteRequested;
         LoadSessionTree();
+    }
+
+    partial void OnActiveSidebarChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsSessionsSidebarVisible));
+        OnPropertyChanged(nameof(IsSftpSidebarVisible));
+        OnPropertyChanged(nameof(IsSnippetsSidebarVisible));
+    }
+
+    public void SetActiveSidebar(string sidebar)
+    {
+        ActiveSidebar = sidebar;
+    }
+
+    private void OnSnippetExecuteRequested(string command)
+    {
+        if (SelectedTab?.SshService is { IsConnected: true } sshService)
+        {
+            sshService.SendData(command + "\n");
+        }
     }
 
     partial void OnSelectedTabChanged(SessionTabViewModel? oldValue, SessionTabViewModel? newValue)
@@ -72,13 +103,14 @@ public partial class MainViewModel : ObservableObject
         if (SelectedTab?.IsConnected == true && SelectedTab.SftpService.IsConnected)
         {
             SftpSidebar.AttachToTab(SelectedTab);
-            IsSftpSidebarVisible = true;
+            if (ActiveSidebar == "Sessions")
+                ActiveSidebar = "SFTP";
         }
         else
         {
             SftpSidebar.AttachToTab(null);
-            if (SelectedTab == null)
-                IsSftpSidebarVisible = false;
+            if (ActiveSidebar == "SFTP" && SelectedTab == null)
+                ActiveSidebar = "Sessions";
         }
     }
 
