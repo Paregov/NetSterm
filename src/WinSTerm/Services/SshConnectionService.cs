@@ -1,5 +1,6 @@
 using Renci.SshNet;
 using Renci.SshNet.Common;
+using Serilog;
 using WinSTerm.Models;
 
 namespace WinSTerm.Services;
@@ -32,8 +33,11 @@ public class SshConnectionService : ISshConnectionService
     {
         return Task.Run(() =>
         {
+            Log.Information("SSH connecting to {Host}:{Port} as {User}", info.Host, info.Port, info.Username);
             _connectionInfo = info;
             LastAuthResponse = null;
+
+            Log.Information("SSH connecting to {Host}:{Port} as {User}", info.Host, info.Port, info.Username);
 
             var connInfo = ConnectionFactory.Create(info, plainPassword, ConfigureKeyboardInteractive);
             _sshClient = new SshClient(connInfo);
@@ -41,12 +45,14 @@ public class SshConnectionService : ISshConnectionService
             try
             {
                 _sshClient.Connect();
+                Log.Debug("SSH client connected to {Host}:{Port}", info.Host, info.Port);
             }
-            catch (Renci.SshNet.Common.SshAuthenticationException)
+            catch (Renci.SshNet.Common.SshAuthenticationException ex)
                 when (plainPassword == null && LastAuthResponse == null)
             {
                 // Auth failed and keyboard-interactive didn't trigger — the server
                 // likely only supports password auth.  Prompt in the terminal and retry.
+                Log.Warning(ex, "Initial auth failed for {Host}, prompting for password", info.Host);
                 _sshClient.Dispose();
                 _sshClient = null;
 
@@ -56,12 +62,15 @@ public class SshConnectionService : ISshConnectionService
                 var retryConn = ConnectionFactory.Create(info, capturedPassword);
                 _sshClient = new SshClient(retryConn);
                 _sshClient.Connect();
+                Log.Debug("SSH client connected on retry to {Host}:{Port}", info.Host, info.Port);
             }
 
             _shellStream = _sshClient.CreateShellStream("xterm-256color", 80, 24, 800, 600, 4096);
+            Log.Debug("Shell stream created for {Host}", info.Host);
 
             // Configure shell to emit OSC 7 with CWD after each command for SFTP sidebar sync
             _shellStream.Write("export PROMPT_COMMAND='printf \"\\033]7;%s\\007\" \"$PWD\"'\n");
+            Log.Debug("PROMPT_COMMAND injected for {Host}", info.Host);
 
             _readCts = new CancellationTokenSource();
             StartReadLoop(_readCts.Token);
@@ -160,6 +169,7 @@ public class SshConnectionService : ISshConnectionService
 
     public void Disconnect()
     {
+        Log.Debug("SSH disconnecting from {Host}", _connectionInfo?.Host);
         _readCts?.Cancel();
 
         // Unblock any waiting auth prompt so the SSH thread does not hang
@@ -183,6 +193,7 @@ public class SshConnectionService : ISshConnectionService
 
         _connectionInfo = null;
         _currentDirectory = null;
+        Log.Debug("SSH disconnect complete");
     }
 
     private void StartReadLoop(CancellationToken ct)
@@ -207,8 +218,9 @@ public class SshConnectionService : ISshConnectionService
                 }
             }
             catch (OperationCanceledException) { }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Log.Error(ex, "SSH read loop error for {Host}", _connectionInfo?.Host);
                 Disconnected?.Invoke();
             }
         }, ct);

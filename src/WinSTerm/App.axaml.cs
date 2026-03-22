@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using AvaloniaWebView;
+using Serilog;
 using WinSTerm.Services;
 
 namespace WinSTerm;
@@ -41,18 +42,19 @@ public partial class App : Application
             desktop.MainWindow = new MainWindow();
         }
 
+        Log.Information("Application initialized");
         base.OnFrameworkInitializationCompleted();
     }
 
     private static void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
         if (e.ExceptionObject is Exception ex)
-            System.Diagnostics.Debug.WriteLine($"Unhandled exception: {ex}");
+            Log.Fatal(ex, "Unhandled domain exception");
     }
 
     private static void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
     {
-        System.Diagnostics.Debug.WriteLine($"Unobserved task exception: {e.Exception}");
+        Log.Error(e.Exception, "Unobserved task exception");
         e.SetObserved();
     }
 }

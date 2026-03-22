@@ -1,4 +1,5 @@
 using Renci.SshNet;
+using Serilog;
 using WinSTerm.Models;
 
 namespace WinSTerm.Services;
@@ -14,10 +15,12 @@ public class SftpService : ISftpService
     {
         return Task.Run(() =>
         {
+            Log.Information("SFTP connecting to {Host}:{Port}", info.Host, info.Port);
             var connInfo = ConnectionFactory.Create(info, plainPassword);
             _sftpClient = new SftpClient(connInfo);
             _sftpClient.Connect();
             CurrentDirectory = _sftpClient.WorkingDirectory;
+            Log.Information("SFTP connected successfully to {Host}", info.Host);
         });
     }
 
@@ -125,6 +128,7 @@ public class SftpService : ISftpService
 
     public void Disconnect()
     {
+        Log.Information("SFTP disconnecting");
         if (_sftpClient != null)
         {
             if (_sftpClient.IsConnected)

@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Serilog;
 using WinSTerm.Models;
 
 namespace WinSTerm.Services;
@@ -31,21 +32,27 @@ public class ConnectionStorageService : IConnectionStorageService
     private ConnectionStore Load()
     {
         if (!File.Exists(_filePath))
+        {
+            Log.Debug("No connections file found, creating new store");
             return new ConnectionStore();
+        }
 
         try
         {
+            Log.Debug("Loading connections from {FilePath}", _filePath);
             var json = File.ReadAllText(_filePath);
             return JsonSerializer.Deserialize<ConnectionStore>(json, s_jsonOptions) ?? new ConnectionStore();
         }
-        catch
+        catch (Exception ex)
         {
+            Log.Error(ex, "Failed to load connections from {FilePath}", _filePath);
             return new ConnectionStore();
         }
     }
 
     public void Save()
     {
+        Log.Debug("Saving connections to {FilePath}", _filePath);
         var json = JsonSerializer.Serialize(_store, s_jsonOptions);
         var tempPath = _filePath + ".tmp";
         File.WriteAllText(tempPath, json);

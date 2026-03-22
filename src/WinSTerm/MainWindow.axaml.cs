@@ -8,6 +8,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
+using Serilog;
 using WinSTerm.Models;
 using WinSTerm.Services;
 using WinSTerm.ViewModels;
@@ -25,6 +26,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         _viewModel = new MainViewModel();
         DataContext = _viewModel;
+        Log.Information("MainWindow created");
     }
 
     // ===== Session Tree Event Handlers =====
@@ -33,12 +35,14 @@ public partial class MainWindow : Window
     {
         if (SessionTreeView.SelectedItem is SessionTreeItem item && !item.IsFolder)
         {
+            Log.Debug("Session tree item double-tapped: {Name}", item.Name);
             try
             {
                 await ConnectToSession(item.ConnectionInfo!);
             }
             catch (Exception ex)
             {
+                Log.Error(ex, "Connection error after double-tap on {Name}", item.Name);
                 await ShowErrorAsync("Connection Error", ex.Message);
             }
         }
@@ -175,6 +179,7 @@ public partial class MainWindow : Window
 
     private async Task ConnectToSession(ConnectionInfo info)
     {
+        Log.Information("Connecting to session {Host}:{Port}", info.Host, info.Port);
         await ViewModel.OpenSession(info);
 
         var tab = ViewModel.SelectedTab;
@@ -185,7 +190,11 @@ public partial class MainWindow : Window
         if (info.AuthMethod == AuthMethod.Password && !string.IsNullOrEmpty(info.EncryptedPassword))
         {
             try { password = ConnectionStorageService.DecryptPassword(info.EncryptedPassword); }
-            catch { password = null; }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Failed to decrypt password for {Host}", info.Host);
+                password = null;
+            }
         }
 
         try
@@ -194,6 +203,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            Log.Error(ex, "Failed to connect to {Host}:{Port}", info.Host, info.Port);
             await ShowErrorAsync("Connection Error",
                 $"Failed to connect to {info.Host}:{info.Port}\n\n{ex.Message}");
             ViewModel.CloseTabCommand.Execute(tab);
@@ -293,13 +303,18 @@ public partial class MainWindow : Window
             if (info.AuthMethod == AuthMethod.Password && !string.IsNullOrEmpty(info.EncryptedPassword))
             {
                 try { password = ConnectionStorageService.DecryptPassword(info.EncryptedPassword); }
-                catch { password = null; }
+                catch (Exception decryptEx)
+                {
+                    Log.Warning(decryptEx, "Failed to decrypt password for reconnect to {Host}", info.Host);
+                    password = null;
+                }
             }
 
             await tab.ConnectAsync(password);
         }
         catch (Exception ex)
         {
+            Log.Error(ex, "Reconnect failed for {Host}", tab.ConnectionInfo.Host);
             await ShowErrorAsync("Reconnect Error", ex.Message);
         }
     }
@@ -329,6 +344,7 @@ public partial class MainWindow : Window
 
     private async void ExportConfig_Click(object? sender, RoutedEventArgs e)
     {
+        Log.Information("Exporting configuration");
         var exportDialog = new ExportDialog();
         await exportDialog.ShowDialog(this);
         if (exportDialog.Result == null)
@@ -358,12 +374,14 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            Log.Error(ex, "Configuration export failed");
             await ShowErrorAsync("Export Error", $"Export failed:\n{ex.Message}");
         }
     }
 
     private async void ImportConfig_Click(object? sender, RoutedEventArgs e)
     {
+        Log.Information("Importing configuration");
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = "Import Configuration",
@@ -405,6 +423,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            Log.Error(ex, "Configuration import failed");
             await ShowErrorAsync("Import Error", $"Import failed:\n{ex.Message}");
         }
     }

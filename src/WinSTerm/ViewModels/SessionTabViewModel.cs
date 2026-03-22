@@ -1,5 +1,6 @@
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Serilog;
 using WinSTerm.Models;
 using WinSTerm.Services;
 
@@ -51,14 +52,28 @@ public partial class SessionTabViewModel : ObservableObject, IDisposable
         {
             IsConnecting = true;
             StatusText = "Connecting...";
+            Log.Information("Session connecting to {Host}:{Port}", ConnectionInfo.Host, ConnectionInfo.Port);
 
             // Wait for terminal WebView to initialize before connecting.
             // Keyboard-interactive auth prompts write to the terminal during connect.
-            await TerminalReady.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            try
+            {
+                await TerminalReady.Task.WaitAsync(TimeSpan.FromSeconds(30));
+                Log.Debug("Terminal WebView ready for {Host}", ConnectionInfo.Host);
+            }
+            catch (TimeoutException)
+            {
+                Log.Warning("Terminal WebView timed out for {Host}, proceeding anyway", ConnectionInfo.Host);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Terminal WebView initialization failed for {Host}", ConnectionInfo.Host);
+            }
 
             await SshService.ConnectAsync(ConnectionInfo, password);
             IsConnected = true;
             StatusText = $"Connected to {ConnectionInfo.Host}";
+            Log.Information("SSH connected to {Host}:{Port}", ConnectionInfo.Host, ConnectionInfo.Port);
 
             // Connect SFTP using the provided password or the one captured
             // from keyboard-interactive authentication.
@@ -69,15 +84,20 @@ public partial class SessionTabViewModel : ObservableObject, IDisposable
                 SftpBrowserViewModel.AttachService(SftpService);
                 // Re-notify so the SFTP sidebar picks up that SFTP is now connected
                 OnPropertyChanged(nameof(IsConnected));
+                Log.Information("SFTP connected to {Host}", ConnectionInfo.Host);
             }
-            catch { /* SFTP is optional - don't fail the session */ }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "SFTP connection failed for {Host} (non-fatal)", ConnectionInfo.Host);
+            }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Log.Error(ex, "Session connection failed for {Host}:{Port}", ConnectionInfo.Host, ConnectionInfo.Port);
             StatusText = "Connection failed";
             IsConnected = false;
             Disconnect();
-            throw; // Re-throw so callers can show error popup
+            throw;
         }
         finally
         {

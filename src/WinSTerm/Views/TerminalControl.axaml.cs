@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Serilog;
 using WebViewCore.Events;
 using WinSTerm.Services;
 using WinSTerm.ViewModels;
@@ -49,17 +50,27 @@ public partial class TerminalControl : UserControl
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
-        TerminalWebView.WebViewCreated += OnWebViewCreated;
-        TerminalWebView.NavigationCompleted += OnNavigationCompleted;
-        TerminalWebView.WebMessageReceived += OnWebMessageReceived;
-
-        TerminalWebView.Url = _terminalHtmlUri;
-
-        if (DataContext is SessionTabViewModel tab)
+        try
         {
-            AttachSshService(tab.SshService);
-            if (_isWebViewReady)
-                tab.TerminalReady.TrySetResult(true);
+            Log.Debug("TerminalControl OnLoaded, setting up WebView");
+            TerminalWebView.WebViewCreated += OnWebViewCreated;
+            TerminalWebView.NavigationCompleted += OnNavigationCompleted;
+            TerminalWebView.WebMessageReceived += OnWebMessageReceived;
+
+            TerminalWebView.Url = _terminalHtmlUri;
+
+            if (DataContext is SessionTabViewModel tab)
+            {
+                AttachSshService(tab.SshService);
+                if (_isWebViewReady)
+                    tab.TerminalReady.TrySetResult(true);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to initialize WebView");
+            if (DataContext is SessionTabViewModel tab)
+                tab.TerminalReady.TrySetException(ex);
         }
     }
 
@@ -67,12 +78,16 @@ public partial class TerminalControl : UserControl
     {
         if (!e.IsSucceed)
         {
-            System.Diagnostics.Debug.WriteLine($"WebView creation failed: {e.Message}");
+            Log.Error("WebView creation failed: {Message}", e.Message);
+            return;
         }
+
+        Log.Information("WebView created successfully");
     }
 
     private void OnNavigationCompleted(object? sender, WebViewUrlLoadedEventArg e)
     {
+        Log.Debug("WebView navigation completed");
         _isWebViewReady = true;
 
         if (DataContext is SessionTabViewModel tabVm)
@@ -84,6 +99,7 @@ public partial class TerminalControl : UserControl
 
     private void OnUnloaded(object? sender, RoutedEventArgs e)
     {
+        Log.Debug("TerminalControl OnUnloaded, detaching services");
         DetachSshService();
         TerminalWebView.WebViewCreated -= OnWebViewCreated;
         TerminalWebView.NavigationCompleted -= OnNavigationCompleted;
@@ -137,19 +153,23 @@ public partial class TerminalControl : UserControl
                 case "resize":
                     var cols = root.GetProperty("cols").GetUInt32();
                     var rows = root.GetProperty("rows").GetUInt32();
+                    Log.Debug("Terminal resize: {Cols}x{Rows}", cols, rows);
                     _sshService?.Resize(cols, rows);
                     break;
 
                 case "cwd":
                     var cwdPath = root.GetProperty("path").GetString();
                     if (!string.IsNullOrEmpty(cwdPath))
+                    {
+                        Log.Debug("Terminal CWD changed: {Path}", cwdPath);
                         _sshService?.UpdateCurrentDirectory(cwdPath);
+                    }
                     break;
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Message error: {ex.Message}");
+            Log.Warning(ex, "Error processing WebView message");
         }
     }
 
@@ -164,12 +184,16 @@ public partial class TerminalControl : UserControl
                 var json = JsonSerializer.Serialize(new { type = "output", data });
                 TerminalWebView.PostWebMessageAsString(json, _terminalHtmlUri);
             }
-            catch { /* WebView may be disposed */ }
+            catch (Exception ex)
+            {
+                Log.Debug(ex, "Failed to post SSH data to WebView (may be disposed)");
+            }
         });
     }
 
     private void OnSshDisconnected()
     {
+        Log.Information("SSH disconnected, notifying terminal");
         Dispatcher.UIThread.Post(() =>
         {
             try
@@ -181,7 +205,10 @@ public partial class TerminalControl : UserControl
                 });
                 TerminalWebView.PostWebMessageAsString(msg, _terminalHtmlUri);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Log.Debug(ex, "Failed to post disconnect message to WebView");
+            }
         });
     }
 
