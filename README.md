@@ -1,4 +1,4 @@
-# WinSTerm - Cross-Platform SSH Terminal
+# NetSterm - Cross-Platform SSH Terminal
 
 A modern cross-platform SSH terminal application inspired by MobaXterm, built with Avalonia and .NET 10. Runs on Windows, Linux, and macOS.
 
@@ -28,13 +28,13 @@ A modern cross-platform SSH terminal application inspired by MobaXterm, built wi
 ## Building
 
 ```bash
-dotnet build src/WinSTerm/WinSTerm.csproj
+dotnet build src/NetSterm/NetSterm.csproj
 ```
 
 ## Running
 
 ```bash
-dotnet run --project src/WinSTerm/WinSTerm.csproj
+dotnet run --project src/NetSterm/NetSterm.csproj
 ```
 
 ## Requirements

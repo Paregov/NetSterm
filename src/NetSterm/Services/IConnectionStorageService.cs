@@ -1,0 +1,18 @@
+using NetSterm.Models;
+
+namespace NetSterm.Services;
+
+public interface IConnectionStorageService
+{
+    ConnectionStore Store { get; }
+    void Save();
+    void AddConnection(ConnectionInfo connection);
+    void UpdateConnection(ConnectionInfo connection);
+    void DeleteConnection(string connectionId);
+    void AddFolder(ConnectionFolder folder);
+    void DeleteFolder(string folderId);
+    List<ConnectionInfo> GetConnectionsInFolder(string? folderId);
+    List<ConnectionFolder> GetSubFolders(string? parentFolderId);
+    void AddFolders(IEnumerable<ConnectionFolder> folders);
+    void AddConnections(IEnumerable<ConnectionInfo> connections);
+}
