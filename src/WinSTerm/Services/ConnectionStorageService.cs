@@ -1,13 +1,21 @@
 using System.IO;
 using System.Security.Cryptography;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using WinSTerm.Models;
 
 namespace WinSTerm.Services;
 
-public class ConnectionStorageService
+public class ConnectionStorageService : IConnectionStorageService
 {
+    private static readonly JsonSerializerOptions s_jsonOptions = new()
+    {
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() }
+    };
+
     private readonly string _filePath;
+    private readonly object _lock = new();
     private ConnectionStore _store;
 
     public ConnectionStorageService()
@@ -27,55 +35,75 @@ public class ConnectionStorageService
             return new ConnectionStore();
 
         var json = File.ReadAllText(_filePath);
-        return JsonConvert.DeserializeObject<ConnectionStore>(json) ?? new ConnectionStore();
+        return JsonSerializer.Deserialize<ConnectionStore>(json, s_jsonOptions) ?? new ConnectionStore();
     }
 
     public void Save()
     {
-        var json = JsonConvert.SerializeObject(_store, Formatting.Indented);
-        File.WriteAllText(_filePath, json);
+        var json = JsonSerializer.Serialize(_store, s_jsonOptions);
+        var tempPath = _filePath + ".tmp";
+        File.WriteAllText(tempPath, json);
+        File.Move(tempPath, _filePath, overwrite: true);
     }
 
     public void AddConnection(Models.ConnectionInfo connection)
     {
-        _store.Connections.Add(connection);
-        Save();
+        lock (_lock)
+        {
+            _store.Connections.Add(connection);
+            Save();
+        }
     }
 
     public void UpdateConnection(Models.ConnectionInfo connection)
     {
-        var index = _store.Connections.FindIndex(c => c.Id == connection.Id);
-        if (index >= 0)
+        lock (_lock)
         {
-            _store.Connections[index] = connection;
-            Save();
+            var index = _store.Connections.FindIndex(c => c.Id == connection.Id);
+            if (index >= 0)
+            {
+                _store.Connections[index] = connection;
+                Save();
+            }
         }
     }
 
     public void DeleteConnection(string connectionId)
     {
-        _store.Connections.RemoveAll(c => c.Id == connectionId);
-        Save();
+        lock (_lock)
+        {
+            _store.Connections.RemoveAll(c => c.Id == connectionId);
+            Save();
+        }
     }
 
     public void AddFolder(ConnectionFolder folder)
     {
-        _store.Folders.Add(folder);
-        Save();
+        lock (_lock)
+        {
+            _store.Folders.Add(folder);
+            Save();
+        }
     }
 
     public void DeleteFolder(string folderId)
     {
-        // Delete all connections in this folder
+        lock (_lock)
+        {
+            DeleteFolderRecursive(folderId);
+            Save();
+        }
+    }
+
+    private void DeleteFolderRecursive(string folderId)
+    {
         _store.Connections.RemoveAll(c => c.FolderId == folderId);
 
-        // Recursively delete subfolders
         var subFolders = _store.Folders.Where(f => f.ParentFolderId == folderId).ToList();
         foreach (var sub in subFolders)
-            DeleteFolder(sub.Id);
+            DeleteFolderRecursive(sub.Id);
 
         _store.Folders.RemoveAll(f => f.Id == folderId);
-        Save();
     }
 
     public List<Models.ConnectionInfo> GetConnectionsInFolder(string? folderId)

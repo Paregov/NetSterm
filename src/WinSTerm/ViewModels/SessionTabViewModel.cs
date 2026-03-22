@@ -14,12 +14,23 @@ public partial class SessionTabViewModel : ObservableObject, IDisposable
     public ConnectionInfo ConnectionInfo { get; }
     public SshConnectionService SshService { get; } = new();
     public SftpService SftpService { get; } = new();
+    public SftpBrowserViewModel SftpBrowserViewModel { get; } = new();
     public string TabId { get; } = Guid.NewGuid().ToString();
 
     public SessionTabViewModel(ConnectionInfo info)
     {
         ConnectionInfo = info;
         Title = info.Name;
+        SshService.Disconnected += OnDisconnected;
+    }
+
+    private void OnDisconnected()
+    {
+        System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
+        {
+            IsConnected = false;
+            StatusText = "Connection lost";
+        });
     }
 
     public async Task ConnectAsync(string? password = null)
@@ -34,7 +45,11 @@ public partial class SessionTabViewModel : ObservableObject, IDisposable
             StatusText = $"Connected to {ConnectionInfo.Host}";
 
             // Also connect SFTP
-            try { await SftpService.ConnectAsync(ConnectionInfo, password); }
+            try
+            {
+                await SftpService.ConnectAsync(ConnectionInfo, password);
+                SftpBrowserViewModel.AttachService(SftpService);
+            }
             catch { /* SFTP is optional - don't fail the session */ }
         }
         catch (Exception ex)
@@ -50,6 +65,7 @@ public partial class SessionTabViewModel : ObservableObject, IDisposable
 
     public void Disconnect()
     {
+        SshService.Disconnected -= OnDisconnected;
         SshService.Disconnect();
         SftpService.Disconnect();
         IsConnected = false;
@@ -58,6 +74,7 @@ public partial class SessionTabViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        SshService.Disconnected -= OnDisconnected;
         SshService.Dispose();
         SftpService.Dispose();
     }

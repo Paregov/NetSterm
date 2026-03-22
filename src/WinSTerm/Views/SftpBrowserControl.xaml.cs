@@ -13,7 +13,6 @@ public partial class SftpBrowserControl : UserControl
     public SftpBrowserControl()
     {
         InitializeComponent();
-        DataContext = new SftpBrowserViewModel();
     }
 
     private void LocalFilesGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)

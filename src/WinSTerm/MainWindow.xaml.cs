@@ -19,18 +19,34 @@ public partial class MainWindow : MetroWindow
         DataContext = new MainViewModel();
     }
 
-    private void SessionTree_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    private async void SessionTree_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (SessionTreeView.SelectedItem is SessionTreeItem item && !item.IsFolder)
         {
-            _ = ConnectToSession(item.ConnectionInfo!);
+            try
+            {
+                await ConnectToSession(item.ConnectionInfo!);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Connection Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
     }
 
-    private void ConnectMenuItem_Click(object sender, RoutedEventArgs e)
+    private async void ConnectMenuItem_Click(object sender, RoutedEventArgs e)
     {
         if (GetTreeItemFromMenuItem(sender) is { IsFolder: false, ConnectionInfo: not null } item)
-            _ = ConnectToSession(item.ConnectionInfo);
+        {
+            try
+            {
+                await ConnectToSession(item.ConnectionInfo);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Connection Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
     }
 
     private void EditMenuItem_Click(object sender, RoutedEventArgs e)
@@ -92,45 +108,6 @@ public partial class MainWindow : MetroWindow
         }
 
         await tab.ConnectAsync(password);
-
-        // Terminal and SFTP controls are wired via DataTemplate
-        // We need to find them after rendering
-        await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.Render);
-        AttachTerminalAndSftp(tab);
-    }
-
-    private void AttachTerminalAndSftp(SessionTabViewModel tab)
-    {
-        // Find the TerminalControl inside the current tab's content
-        var tabControl = FindVisualChild<TabControl>(this);
-        if (tabControl == null) return;
-
-        var container = tabControl.ItemContainerGenerator.ContainerFromItem(tab) as TabItem;
-        if (container == null) return;
-
-        var terminalControl = FindVisualChild<TerminalControl>(container);
-        if (terminalControl != null)
-        {
-            terminalControl.AttachSshService(tab.SshService);
-        }
-
-        var sftpControl = FindVisualChild<SftpBrowserControl>(container);
-        if (sftpControl != null && sftpControl.DataContext is SftpBrowserViewModel sftpVm)
-        {
-            sftpVm.AttachService(tab.SftpService);
-        }
-    }
-
-    private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
-    {
-        for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
-        {
-            var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
-            if (child is T result) return result;
-            var descendant = FindVisualChild<T>(child);
-            if (descendant != null) return descendant;
-        }
-        return null;
     }
 
     private static SessionTreeItem? GetTreeItemFromMenuItem(object sender)
@@ -156,7 +133,14 @@ public partial class MainWindow : MetroWindow
             AuthMethod = AuthMethod.Password
         };
 
-        await ConnectToSession(info);
+        try
+        {
+            await ConnectToSession(info);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Connection Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void Exit_Click(object sender, RoutedEventArgs e)

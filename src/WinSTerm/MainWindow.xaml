@@ -20,6 +20,8 @@
         <converters:ConnectionStatusToColorConverter x:Key="StatusToColor"/>
         <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
         <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis"/>
+        <converters:NullToVisibilityConverter x:Key="NullToVis"/>
+        <converters:InverseNullToVisibilityConverter x:Key="NullToCollapsed"/>
     </mah:MetroWindow.Resources>
 
     <DockPanel LastChildFill="True">
@@ -203,7 +205,7 @@
             <Grid Grid.Column="2">
                 <!-- Welcome screen when no tabs are open -->
                 <Border Background="#1e1e1e"
-                        Visibility="{Binding SelectedTab, Converter={StaticResource InverseBoolToVis}}">
+                        Visibility="{Binding SelectedTab, Converter={StaticResource NullToVis}}">
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                         <iconPacks:PackIconMaterial Kind="Console" Width="64" Height="64"
                                                     Foreground="#333" HorizontalAlignment="Center"
@@ -220,7 +222,8 @@
                 <TabControl ItemsSource="{Binding Tabs}"
                             SelectedItem="{Binding SelectedTab}"
                             Background="Transparent"
-                            BorderThickness="0">
+                            BorderThickness="0"
+                            Visibility="{Binding SelectedTab, Converter={StaticResource NullToCollapsed}}">
                     <!-- Tab Header Template -->
                     <TabControl.ItemTemplate>
                         <DataTemplate>
@@ -253,7 +256,7 @@
                                 </Grid.RowDefinitions>
 
                                 <!-- Terminal Control -->
-                                <views:TerminalControl x:Name="TerminalArea" Grid.Row="0" />
+                                <views:TerminalControl Grid.Row="0" />
 
                                 <!-- SFTP Toggle & Splitter -->
                                 <Border Grid.Row="1"
@@ -283,6 +286,7 @@
 
                                 <!-- SFTP Browser (collapsible) -->
                                 <views:SftpBrowserControl Grid.Row="2"
+                                    DataContext="{Binding SftpBrowserViewModel}"
                                     Height="250"
                                     Visibility="{Binding IsChecked, ElementName=SftpToggle, Converter={StaticResource BoolToVis}}"/>
 

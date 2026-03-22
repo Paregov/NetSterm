@@ -3,7 +3,7 @@ using WinSTerm.Models;
 
 namespace WinSTerm.Services;
 
-public class SftpService : IDisposable
+public class SftpService : ISftpService
 {
     private SftpClient? _sftpClient;
 
@@ -14,22 +14,7 @@ public class SftpService : IDisposable
     {
         return Task.Run(() =>
         {
-            var authMethods = new List<AuthenticationMethod>();
-            if (info.AuthMethod == AuthMethod.PrivateKey && !string.IsNullOrEmpty(info.PrivateKeyPath))
-            {
-                var keyFile = new PrivateKeyFile(info.PrivateKeyPath);
-                authMethods.Add(new PrivateKeyAuthenticationMethod(info.Username, keyFile));
-            }
-            else
-            {
-                var password = plainPassword
-                    ?? (!string.IsNullOrEmpty(info.EncryptedPassword)
-                        ? ConnectionStorageService.DecryptPassword(info.EncryptedPassword)
-                        : "");
-                authMethods.Add(new PasswordAuthenticationMethod(info.Username, password));
-            }
-
-            var connInfo = new Renci.SshNet.ConnectionInfo(info.Host, info.Port, info.Username, authMethods.ToArray());
+            var connInfo = ConnectionFactory.Create(info, plainPassword);
             _sftpClient = new SftpClient(connInfo);
             _sftpClient.Connect();
             CurrentDirectory = _sftpClient.WorkingDirectory;

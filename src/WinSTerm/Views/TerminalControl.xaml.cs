@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using WinSTerm.Services;
+using WinSTerm.ViewModels;
 
 namespace WinSTerm.Views;
 
@@ -17,6 +18,13 @@ public partial class TerminalControl : UserControl
         InitializeComponent();
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
+        DataContextChanged += OnDataContextChanged;
+    }
+
+    private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (DataContext is SessionTabViewModel tab)
+            AttachSshService(tab.SshService);
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -40,6 +48,10 @@ public partial class TerminalControl : UserControl
         {
             System.Diagnostics.Debug.WriteLine($"WebView2 init error: {ex.Message}");
         }
+
+        // Wire up if DataContext is already set when we load
+        if (DataContext is SessionTabViewModel tab)
+            AttachSshService(tab.SshService);
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
@@ -47,7 +59,7 @@ public partial class TerminalControl : UserControl
         DetachSshService();
     }
 
-    public void AttachSshService(SshConnectionService sshService)
+    private void AttachSshService(SshConnectionService sshService)
     {
         DetachSshService();
         _sshService = sshService;
