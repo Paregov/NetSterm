@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using NetSterm.Models;
 
@@ -70,5 +71,15 @@ public partial class SnippetEditDialog : Window
     private void CancelButton_Click(object? sender, RoutedEventArgs e)
     {
         Close(false);
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            Close(false);
+            e.Handled = true;
+        }
+        base.OnKeyDown(e);
     }
 }

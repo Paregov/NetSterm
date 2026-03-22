@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using NetSterm.Services;
 using NetSterm.ViewModels;
@@ -98,5 +99,15 @@ public partial class SettingsDialog : Window
             Avalonia.Media.Color.Parse(isError ? "#E74C3C" : "#27AE60"));
         SecurityStatusText.Text = message;
         SecurityStatusText.IsVisible = true;
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            Close();
+            e.Handled = true;
+        }
+        base.OnKeyDown(e);
     }
 }

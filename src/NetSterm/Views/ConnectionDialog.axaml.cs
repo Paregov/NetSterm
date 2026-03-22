@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using NetSterm.Models;
 using NetSterm.ViewModels;
@@ -30,5 +31,15 @@ public partial class ConnectionDialog : Window
     private void PrivateKeyRadio_Click(object? sender, RoutedEventArgs e)
     {
         _viewModel.SelectedAuthMethod = AuthMethod.PrivateKey;
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            Close();
+            e.Handled = true;
+        }
+        base.OnKeyDown(e);
     }
 }
