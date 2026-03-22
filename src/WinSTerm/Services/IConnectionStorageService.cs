@@ -13,4 +13,6 @@ public interface IConnectionStorageService
     void DeleteFolder(string folderId);
     List<ConnectionInfo> GetConnectionsInFolder(string? folderId);
     List<ConnectionFolder> GetSubFolders(string? parentFolderId);
+    void AddFolders(IEnumerable<ConnectionFolder> folders);
+    void AddConnections(IEnumerable<ConnectionInfo> connections);
 }

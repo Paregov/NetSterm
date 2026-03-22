@@ -342,6 +342,64 @@ public partial class MainWindow : MetroWindow
         dialog.ShowDialog();
     }
 
+    private void ExportConnections_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.SaveFileDialog
+        {
+            Filter = "WinSTerm Connections (*.winsterm)|*.winsterm|JSON Files (*.json)|*.json",
+            DefaultExt = ".winsterm",
+            FileName = "winsterm-connections"
+        };
+
+        if (dialog.ShowDialog() != true) return;
+
+        try
+        {
+            ViewModel.ExportConnections(dialog.FileName);
+            MessageBox.Show(
+                $"Connections exported successfully to:\n{dialog.FileName}",
+                "Export Complete",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Export failed:\n{ex.Message}",
+                "Export Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+    private void ImportConnections_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Filter = "WinSTerm Connections (*.winsterm)|*.winsterm|JSON Files (*.json)|*.json"
+        };
+
+        if (dialog.ShowDialog() != true) return;
+
+        try
+        {
+            var (connectionCount, folderCount) = ViewModel.ImportConnections(dialog.FileName);
+            MessageBox.Show(
+                $"Imported {connectionCount} connection(s) and {folderCount} folder(s).",
+                "Import Complete",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Import failed:\n{ex.Message}",
+                "Import Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);

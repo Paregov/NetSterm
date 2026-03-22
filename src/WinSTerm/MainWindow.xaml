@@ -77,6 +77,17 @@
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator/>
+                <MenuItem Header="_Export Connections..." Click="ExportConnections_Click">
+                    <MenuItem.Icon>
+                        <iconPacks:PackIconMaterial Kind="Export" Width="14" Height="14"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Import Connections..." Click="ImportConnections_Click">
+                    <MenuItem.Icon>
+                        <iconPacks:PackIconMaterial Kind="Import" Width="14" Height="14"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <Separator/>
                 <MenuItem Header="_Settings" Click="Settings_Click" InputGestureText="Ctrl+,">
                     <MenuItem.Icon>
                         <iconPacks:PackIconMaterial Kind="Cog" Width="14" Height="14"/>

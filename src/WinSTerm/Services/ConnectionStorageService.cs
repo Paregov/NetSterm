@@ -116,6 +116,24 @@ public class ConnectionStorageService : IConnectionStorageService
         return _store.Folders.Where(f => f.ParentFolderId == parentFolderId).ToList();
     }
 
+    public void AddFolders(IEnumerable<ConnectionFolder> folders)
+    {
+        lock (_lock)
+        {
+            _store.Folders.AddRange(folders);
+            Save();
+        }
+    }
+
+    public void AddConnections(IEnumerable<ConnectionInfo> connections)
+    {
+        lock (_lock)
+        {
+            _store.Connections.AddRange(connections);
+            Save();
+        }
+    }
+
     public static string EncryptPassword(string plaintext)
     {
         var bytes = System.Text.Encoding.UTF8.GetBytes(plaintext);
