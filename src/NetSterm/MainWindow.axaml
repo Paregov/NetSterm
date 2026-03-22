@@ -244,21 +244,21 @@
                                 </StackPanel>
                             </RadioButton>
                             <RadioButton Grid.Column="1" GroupName="SidebarTab"
-                                         IsChecked="{Binding IsSftpSidebarVisible, Mode=OneWay}"
-                                         Checked="SftpTab_Checked"
-                                         Classes="sidebarTab">
-                                <StackPanel Orientation="Horizontal">
-                                    <mi:MaterialIcon Kind="FolderNetwork" Width="12" Height="12" Margin="0,0,4,0"/>
-                                    <TextBlock Text="SFTP" FontSize="12"/>
-                                </StackPanel>
-                            </RadioButton>
-                            <RadioButton Grid.Column="2" GroupName="SidebarTab"
                                          IsChecked="{Binding IsSnippetsSidebarVisible, Mode=OneWay}"
                                          Checked="SnippetsTab_Checked"
                                          Classes="sidebarTab">
                                 <StackPanel Orientation="Horizontal">
                                     <mi:MaterialIcon Kind="CodeBraces" Width="12" Height="12" Margin="0,0,4,0"/>
                                     <TextBlock Text="Snippets" FontSize="12"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton Grid.Column="2" GroupName="SidebarTab"
+                                         IsChecked="{Binding IsSftpSidebarVisible, Mode=OneWay}"
+                                         Checked="SftpTab_Checked"
+                                         Classes="sidebarTab">
+                                <StackPanel Orientation="Horizontal">
+                                    <mi:MaterialIcon Kind="FolderNetwork" Width="12" Height="12" Margin="0,0,4,0"/>
+                                    <TextBlock Text="SFTP" FontSize="12"/>
                                 </StackPanel>
                             </RadioButton>
                         </Grid>

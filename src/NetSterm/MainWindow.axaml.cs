@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Serilog;
 using NetSterm.Models;
@@ -33,7 +34,7 @@ public partial class MainWindow : Window
 
     private async void SessionTree_DoubleTapped(object? sender, TappedEventArgs e)
     {
-        if (SessionTreeView.SelectedItem is SessionTreeItem item && !item.IsFolder)
+        if (SessionTreeView.SelectedItem is SessionTreeItem item && !item.IsFolder && !item.IsEditing)
         {
             Log.Debug("Session tree item double-tapped: {Name}", item.Name);
             try
@@ -93,6 +94,7 @@ public partial class MainWindow : Window
         if (e.Key == Key.F2)
         {
             item.IsEditing = true;
+            FocusEditTextBox(SessionTreeView, item);
             e.Handled = true;
         }
         else if (e.Key == Key.Delete)
@@ -192,6 +194,7 @@ public partial class MainWindow : Window
         if (GetTreeItemFromMenuItem(sender) is { } item)
         {
             item.IsEditing = true;
+            FocusEditTextBox(SessionTreeView, item);
         }
     }
 
@@ -920,6 +923,7 @@ public partial class MainWindow : Window
         if (GetSnippetTreeItemFromMenuItem(sender) is { } item)
         {
             item.IsEditing = true;
+            FocusEditTextBox(SnippetTreeView, item);
         }
     }
 
@@ -953,6 +957,7 @@ public partial class MainWindow : Window
         if (e.Key == Key.F2)
         {
             item.IsEditing = true;
+            FocusEditTextBox(SnippetTreeView, item);
             e.Handled = true;
         }
         else if (e.Key == Key.Delete)
@@ -972,7 +977,7 @@ public partial class MainWindow : Window
 
     private void SnippetTree_DoubleTapped(object? sender, TappedEventArgs e)
     {
-        if (SnippetTreeView.SelectedItem is SnippetTreeItem { IsFolder: false, Snippet: not null } item)
+        if (SnippetTreeView.SelectedItem is SnippetTreeItem { IsFolder: false, Snippet: not null, IsEditing: false } item)
         {
             ViewModel.SnippetsSidebar.ExecuteSnippet(item.Snippet);
         }
@@ -1034,6 +1039,34 @@ public partial class MainWindow : Window
         if (sender is MenuItem { DataContext: SnippetTreeItem item })
             return item;
         return null;
+    }
+
+    // ===== Visual Tree Helpers =====
+
+    private static T? FindDescendant<T>(Control root) where T : Control
+    {
+        foreach (var child in root.GetVisualDescendants())
+        {
+            if (child is T found)
+                return found;
+        }
+        return null;
+    }
+
+    private static void FocusEditTextBox(TreeView treeView, object item)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            foreach (var descendant in treeView.GetVisualDescendants())
+            {
+                if (descendant is TextBox tb && tb.DataContext == item)
+                {
+                    tb.Focus();
+                    tb.SelectAll();
+                    return;
+                }
+            }
+        }, DispatcherPriority.Background);
     }
 
     // ===== Dialog Helpers =====
