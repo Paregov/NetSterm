@@ -1,10 +1,812 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        xmlns:vm="clr-namespace:WinSTerm.ViewModels"
+        xmlns:converters="clr-namespace:WinSTerm.Converters"
+        xmlns:views="clr-namespace:WinSTerm.Views"
+        mc:Ignorable="d"
         x:Class="WinSTerm.MainWindow"
+        x:CompileBindings="False"
         Title="WinSTerm - SSH Terminal"
-        Width="1200" Height="800">
-    <TextBlock Text="WinSTerm - Migration in progress..."
-               VerticalAlignment="Center"
-               HorizontalAlignment="Center"
-               FontSize="24"/>
+        Icon="Assets/winsterm.ico"
+        Width="1200" Height="800"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <converters:ConnectionStatusToColorConverter x:Key="StatusToColor"/>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
+        <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis"/>
+        <converters:NullToVisibilityConverter x:Key="NullToVis"/>
+        <converters:InverseNullToVisibilityConverter x:Key="NullToCollapsed"/>
+        <converters:InverseBoolConverter x:Key="InverseBool"/>
+        <converters:FileSizeConverter x:Key="FileSizeConverter"/>
+        <converters:EqualityConverter x:Key="EqualityConverter"/>
+
+        <!-- Dark theme colors -->
+        <SolidColorBrush x:Key="ToolbarBackground" Color="#2d2d30"/>
+        <SolidColorBrush x:Key="SidebarBackground" Color="#252526"/>
+        <SolidColorBrush x:Key="SidebarBorder" Color="#3e3e42"/>
+        <SolidColorBrush x:Key="AccentBlueBrush" Color="#0078d4"/>
+        <SolidColorBrush x:Key="StatusBarBackground" Color="#007acc"/>
+        <SolidColorBrush x:Key="StatusBarForeground" Color="White"/>
+    </Window.Resources>
+
+    <Window.Styles>
+        <!-- Sidebar tab toggle style (RadioButton as flat tab) -->
+        <Style Selector="RadioButton.sidebarTab">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#999999"/>
+            <Setter Property="BorderThickness" Value="0,0,0,2"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border x:Name="PART_Border"
+                            Background="{TemplateBinding Background}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          Content="{TemplateBinding Content}"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="RadioButton.sidebarTab:checked">
+            <Setter Property="BorderBrush" Value="{StaticResource AccentBlueBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+        <Style Selector="RadioButton.sidebarTab:pointerover /template/ Border#PART_Border">
+            <Setter Property="Background" Value="#3e3e42"/>
+        </Style>
+
+        <!-- Chromeless button style -->
+        <Style Selector="Button.chromeless">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="4"/>
+        </Style>
+        <Style Selector="Button.chromeless:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#3e3e42"/>
+        </Style>
+
+        <!-- Tab ListBox item style -->
+        <Style Selector="ListBox.tabStrip">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+        </Style>
+        <Style Selector="ListBox.tabStrip ListBoxItem">
+            <Setter Property="Padding" Value="4,6"/>
+            <Setter Property="Margin" Value="2,2,0,0"/>
+            <Setter Property="CornerRadius" Value="4,4,0,0"/>
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBox.tabStrip ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#2a2d2e"/>
+        </Style>
+        <Style Selector="ListBox.tabStrip ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="#1e1e1e"/>
+        </Style>
+    </Window.Styles>
+
+    <DockPanel LastChildFill="True">
+
+        <!-- Menu Bar -->
+        <Menu DockPanel.Dock="Top" Background="{StaticResource ToolbarBackground}">
+            <MenuItem Header="_File">
+                <MenuItem Header="_New Connection" Click="NewConnection_Click">
+                    <MenuItem.Icon>
+                        <mi:MaterialIcon Kind="Plus" Width="14" Height="14"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="New _Folder" Command="{Binding AddFolderCommand}">
+                    <MenuItem.Icon>
+                        <mi:MaterialIcon Kind="FolderPlus" Width="14" Height="14"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <Separator/>
+                <MenuItem Header="_Export Configuration..." Click="ExportConfig_Click">
+                    <MenuItem.Icon>
+                        <mi:MaterialIcon Kind="Export" Width="14" Height="14"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Import Configuration..." Click="ImportConfig_Click">
+                    <MenuItem.Icon>
+                        <mi:MaterialIcon Kind="Import" Width="14" Height="14"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <Separator/>
+                <MenuItem Header="_Settings" Click="Settings_Click" InputGesture="Ctrl+OemComma">
+                    <MenuItem.Icon>
+                        <mi:MaterialIcon Kind="Cog" Width="14" Height="14"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <Separator/>
+                <MenuItem Header="E_xit" Click="Exit_Click"/>
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="Quick Connect _Bar"
+                          IsChecked="{Binding IsQuickConnectVisible, Mode=TwoWay}"
+                          ToggleType="CheckBox">
+                    <MenuItem.Icon>
+                        <mi:MaterialIcon Kind="ServerNetwork" Width="14" Height="14"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="_About WinSTerm" Click="About_Click">
+                    <MenuItem.Icon>
+                        <mi:MaterialIcon Kind="InformationOutline" Width="14" Height="14"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+        </Menu>
+
+        <!-- Quick Connect Toolbar -->
+        <Border DockPanel.Dock="Top"
+                Background="{StaticResource ToolbarBackground}"
+                BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,0,0,1"
+                Padding="8,4"
+                IsVisible="{Binding IsQuickConnectVisible}">
+            <StackPanel Orientation="Horizontal">
+                <mi:MaterialIcon Kind="ServerNetwork" VerticalAlignment="Center"
+                                 Margin="0,0,6,0" Width="16" Height="16"
+                                 Foreground="{StaticResource AccentBlueBrush}"/>
+
+                <TextBlock Text="Host:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                <TextBox Width="180"
+                         Text="{Binding QuickHost, Mode=TwoWay}"
+                         Watermark="hostname or IP"
+                         Margin="0,0,8,0"/>
+
+                <TextBlock Text="User:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                <TextBox Width="120"
+                         Text="{Binding QuickUsername, Mode=TwoWay}"
+                         Watermark="username"
+                         Margin="0,0,8,0"/>
+
+                <TextBlock Text="Port:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                <NumericUpDown Width="100" Value="{Binding QuickPort}"
+                               Minimum="1" Maximum="65535"
+                               Margin="0,0,8,0" FormatString="0"/>
+
+                <Button Click="QuickConnect_Click"
+                        Background="{StaticResource AccentBlueBrush}"
+                        Foreground="White"
+                        Padding="12,4">
+                    <StackPanel Orientation="Horizontal">
+                        <mi:MaterialIcon Kind="Connection" Width="14" Height="14" Margin="0,0,4,0"/>
+                        <TextBlock Text="Connect"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <!-- Status Bar -->
+        <Border DockPanel.Dock="Bottom" Background="{StaticResource StatusBarBackground}"
+                Padding="6,3">
+            <DockPanel>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                    <mi:MaterialIcon Kind="Monitor" Width="12" Height="12"
+                                     Margin="0,0,4,0"
+                                     Foreground="{StaticResource StatusBarForeground}"/>
+                    <TextBlock Foreground="{StaticResource StatusBarForeground}">
+                        <Run Text="{Binding ConnectionCount, Mode=OneWay}"/>
+                        <Run Text=" session(s)"/>
+                    </TextBlock>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <mi:MaterialIcon Kind="Information" Width="12" Height="12"
+                                     Margin="0,0,4,0"
+                                     Foreground="{StaticResource StatusBarForeground}"/>
+                    <TextBlock Text="{Binding StatusMessage}"
+                               Foreground="{StaticResource StatusBarForeground}"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Main Content: Sidebar + Tabs -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250" MinWidth="150" MaxWidth="500"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left Sidebar -->
+            <Border Grid.Column="0"
+                    Background="{StaticResource SidebarBackground}"
+                    BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <!-- Sidebar Toggle Header -->
+                    <Border DockPanel.Dock="Top"
+                            Background="{StaticResource ToolbarBackground}"
+                            BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,0,0,1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <RadioButton Grid.Column="0" GroupName="SidebarTab"
+                                         IsChecked="{Binding IsSessionsSidebarVisible, Mode=OneWay}"
+                                         Checked="SessionsTab_Checked"
+                                         Classes="sidebarTab">
+                                <StackPanel Orientation="Horizontal">
+                                    <mi:MaterialIcon Kind="FolderAccount" Width="12" Height="12" Margin="0,0,4,0"/>
+                                    <TextBlock Text="Sessions" FontSize="12"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton Grid.Column="1" GroupName="SidebarTab"
+                                         IsChecked="{Binding IsSftpSidebarVisible, Mode=OneWay}"
+                                         Checked="SftpTab_Checked"
+                                         Classes="sidebarTab">
+                                <StackPanel Orientation="Horizontal">
+                                    <mi:MaterialIcon Kind="FolderNetwork" Width="12" Height="12" Margin="0,0,4,0"/>
+                                    <TextBlock Text="SFTP" FontSize="12"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton Grid.Column="2" GroupName="SidebarTab"
+                                         IsChecked="{Binding IsSnippetsSidebarVisible, Mode=OneWay}"
+                                         Checked="SnippetsTab_Checked"
+                                         Classes="sidebarTab">
+                                <StackPanel Orientation="Horizontal">
+                                    <mi:MaterialIcon Kind="CodeBraces" Width="12" Height="12" Margin="0,0,4,0"/>
+                                    <TextBlock Text="Snippets" FontSize="12"/>
+                                </StackPanel>
+                            </RadioButton>
+                        </Grid>
+                    </Border>
+
+                    <!-- Content area: Sessions, SFTP, Snippets panels overlaid -->
+                    <Grid>
+                        <!-- ===== Sessions Panel ===== -->
+                        <DockPanel IsVisible="{Binding IsSessionsSidebarVisible}">
+                            <!-- Sessions toolbar -->
+                            <Border DockPanel.Dock="Top" Padding="4,2"
+                                    Background="{StaticResource ToolbarBackground}"
+                                    BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,0,0,1">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Command="{Binding AddFolderCommand}" ToolTip.Tip="New Folder"
+                                            Classes="chromeless"
+                                            Padding="4" Margin="2,0">
+                                        <mi:MaterialIcon Kind="FolderPlus" Width="14" Height="14"/>
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Sessions TreeView -->
+                            <TreeView x:Name="SessionTreeView"
+                                      ItemsSource="{Binding SessionTree}"
+                                      Background="Transparent" BorderThickness="0"
+                                      Padding="4"
+                                      DoubleTapped="SessionTree_DoubleTapped">
+                                <TreeView.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="New Connection" Click="NewConnectionFromTree_Click">
+                                            <MenuItem.Icon>
+                                                <mi:MaterialIcon Kind="Plus" Width="14" Height="14"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="New Folder" Click="NewFolderFromTree_Click">
+                                            <MenuItem.Icon>
+                                                <mi:MaterialIcon Kind="FolderPlus" Width="14" Height="14"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                    </ContextMenu>
+                                </TreeView.ContextMenu>
+                                <TreeView.DataTemplates>
+                                    <TreeDataTemplate DataType="vm:SessionTreeItem"
+                                                      ItemsSource="{Binding Children}">
+                                        <StackPanel Orientation="Horizontal" Margin="2">
+                                            <StackPanel.ContextMenu>
+                                                <ContextMenu>
+                                                    <!-- Connection-only: Connect -->
+                                                    <MenuItem Header="Connect" Click="ConnectMenuItem_Click"
+                                                              IsVisible="{Binding !IsFolder}">
+                                                        <MenuItem.Icon>
+                                                            <mi:MaterialIcon Kind="Connection" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <!-- Folder-only: New Connection Here -->
+                                                    <MenuItem Header="New Connection Here" Click="NewConnectionInFolder_Click"
+                                                              IsVisible="{Binding IsFolder}">
+                                                        <MenuItem.Icon>
+                                                            <mi:MaterialIcon Kind="Plus" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <!-- Folder-only: New Subfolder -->
+                                                    <MenuItem Header="New Subfolder" Click="NewSubfolderInFolder_Click"
+                                                              IsVisible="{Binding IsFolder}">
+                                                        <MenuItem.Icon>
+                                                            <mi:MaterialIcon Kind="FolderPlus" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <Separator/>
+                                                    <!-- Folder-only: Rename -->
+                                                    <MenuItem Header="Rename" Click="RenameItem_Click"
+                                                              IsVisible="{Binding IsFolder}">
+                                                        <MenuItem.Icon>
+                                                            <mi:MaterialIcon Kind="Pencil" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <!-- Connection-only: Edit -->
+                                                    <MenuItem Header="Edit" Click="EditMenuItem_Click"
+                                                              IsVisible="{Binding !IsFolder}">
+                                                        <MenuItem.Icon>
+                                                            <mi:MaterialIcon Kind="Pencil" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <Separator/>
+                                                    <!-- Both: Delete -->
+                                                    <MenuItem Header="Delete" Click="DeleteMenuItem_Click">
+                                                        <MenuItem.Icon>
+                                                            <mi:MaterialIcon Kind="Delete" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                </ContextMenu>
+                                            </StackPanel.ContextMenu>
+                                            <!-- Folder icon -->
+                                            <mi:MaterialIcon Kind="Folder" Width="14" Height="14"
+                                                             Foreground="#dca756"
+                                                             IsVisible="{Binding IsFolder}"
+                                                             Margin="0,0,6,0"/>
+                                            <!-- Connection icon -->
+                                            <mi:MaterialIcon Kind="Console" Width="14" Height="14"
+                                                             Foreground="{StaticResource AccentBlueBrush}"
+                                                             IsVisible="{Binding !IsFolder}"
+                                                             Margin="0,0,6,0"/>
+                                            <!-- Normal mode: display name -->
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                                       IsVisible="{Binding !IsEditing}"/>
+                                            <!-- Edit mode: editable name -->
+                                            <TextBox Text="{Binding Name, Mode=TwoWay}"
+                                                     IsVisible="{Binding IsEditing}"
+                                                     MinWidth="100" VerticalAlignment="Center"
+                                                     LostFocus="TreeItemTextBox_LostFocus"
+                                                     KeyDown="TreeItemTextBox_KeyDown"
+                                                     AttachedToVisualTree="TreeItemTextBox_Attached"/>
+                                        </StackPanel>
+                                    </TreeDataTemplate>
+                                </TreeView.DataTemplates>
+                            </TreeView>
+                        </DockPanel>
+
+                        <!-- ===== SFTP Sidebar Panel ===== -->
+                        <DockPanel IsVisible="{Binding IsSftpSidebarVisible}">
+                            <!-- SFTP toolbar: path + up + refresh -->
+                            <Border DockPanel.Dock="Top" Padding="4,2"
+                                    Background="{StaticResource ToolbarBackground}"
+                                    BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,0,0,1">
+                                <DockPanel>
+                                    <Button Command="{Binding SftpSidebar.RefreshCommand}"
+                                            ToolTip.Tip="Refresh"
+                                            Classes="chromeless"
+                                            Padding="4" Margin="2,0" DockPanel.Dock="Right">
+                                        <mi:MaterialIcon Kind="Refresh" Width="14" Height="14"/>
+                                    </Button>
+                                    <Button Command="{Binding SftpSidebar.NavigateUpCommand}"
+                                            ToolTip.Tip="Go to parent directory"
+                                            Classes="chromeless"
+                                            Padding="4" Margin="2,0" DockPanel.Dock="Right">
+                                        <mi:MaterialIcon Kind="ArrowUp" Width="14" Height="14"/>
+                                    </Button>
+                                    <TextBlock Text="{Binding SftpSidebar.CurrentPath}"
+                                               FontSize="11" VerticalAlignment="Center"
+                                               Foreground="#999999" Margin="4,0"
+                                               TextTrimming="CharacterEllipsis"
+                                               ToolTip.Tip="{Binding SftpSidebar.CurrentPath}"/>
+                                </DockPanel>
+                            </Border>
+
+                            <Grid>
+                                <!-- Not connected placeholder -->
+                                <StackPanel IsVisible="{Binding !SftpSidebar.IsConnected}"
+                                            VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <mi:MaterialIcon Kind="FolderNetwork" Width="32" Height="32"
+                                                     Foreground="#444444" HorizontalAlignment="Center"
+                                                     Margin="0,0,0,8"/>
+                                    <TextBlock Text="Connect to a server&#x0a;to browse remote files"
+                                               Foreground="#666666" FontSize="12"
+                                               TextAlignment="Center" TextWrapping="Wrap"/>
+                                </StackPanel>
+
+                                <!-- Connected: SFTP tree + loading overlay -->
+                                <Grid IsVisible="{Binding SftpSidebar.IsConnected}">
+                                    <!-- SFTP TreeView -->
+                                    <TreeView x:Name="SftpTreeView"
+                                              ItemsSource="{Binding SftpSidebar.RootNodes}"
+                                              Background="Transparent" BorderThickness="0"
+                                              Padding="4"
+                                              DoubleTapped="SftpTree_DoubleTapped"
+                                              DragDrop.AllowDrop="True"
+                                              DragDrop.DragOver="SftpTreeView_DragOver"
+                                              DragDrop.Drop="SftpTreeView_Drop">
+                                        <TreeView.DataTemplates>
+                                            <TreeDataTemplate DataType="vm:SftpTreeNode"
+                                                              ItemsSource="{Binding Children}">
+                                                <StackPanel Orientation="Horizontal" Margin="2">
+                                                    <StackPanel.ContextMenu>
+                                                        <ContextMenu>
+                                                            <MenuItem Header="Download" Click="SftpDownload_Click">
+                                                                <MenuItem.Icon>
+                                                                    <mi:MaterialIcon Kind="Download" Width="14" Height="14"/>
+                                                                </MenuItem.Icon>
+                                                            </MenuItem>
+                                                            <MenuItem Header="Rename" Click="SftpRename_Click">
+                                                                <MenuItem.Icon>
+                                                                    <mi:MaterialIcon Kind="RenameBox" Width="14" Height="14"/>
+                                                                </MenuItem.Icon>
+                                                            </MenuItem>
+                                                            <MenuItem Header="Delete" Click="SftpDelete_Click">
+                                                                <MenuItem.Icon>
+                                                                    <mi:MaterialIcon Kind="Delete" Width="14" Height="14"/>
+                                                                </MenuItem.Icon>
+                                                            </MenuItem>
+                                                            <Separator/>
+                                                            <MenuItem Header="New Folder" Click="SftpNewFolder_Click">
+                                                                <MenuItem.Icon>
+                                                                    <mi:MaterialIcon Kind="FolderPlus" Width="14" Height="14"/>
+                                                                </MenuItem.Icon>
+                                                            </MenuItem>
+                                                            <MenuItem Header="Upload Files Here..." Click="SftpUploadHere_Click">
+                                                                <MenuItem.Icon>
+                                                                    <mi:MaterialIcon Kind="Upload" Width="14" Height="14"/>
+                                                                </MenuItem.Icon>
+                                                            </MenuItem>
+                                                        </ContextMenu>
+                                                    </StackPanel.ContextMenu>
+                                                    <!-- Directory icon -->
+                                                    <mi:MaterialIcon Kind="Folder" Width="14" Height="14"
+                                                                     Foreground="#dca756"
+                                                                     IsVisible="{Binding IsDirectory}"
+                                                                     Margin="0,0,6,0"/>
+                                                    <!-- File icon -->
+                                                    <mi:MaterialIcon Kind="FileDocumentOutline" Width="14" Height="14"
+                                                                     Foreground="#999999"
+                                                                     IsVisible="{Binding !IsDirectory}"
+                                                                     Margin="0,0,6,0"/>
+                                                    <!-- File name -->
+                                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                                                    <!-- File size (files only) -->
+                                                    <TextBlock Text="{Binding SizeDisplay}" VerticalAlignment="Center"
+                                                               Foreground="#666666" Margin="8,0,0,0" FontSize="11"
+                                                               IsVisible="{Binding !IsDirectory}"/>
+                                                </StackPanel>
+                                            </TreeDataTemplate>
+                                        </TreeView.DataTemplates>
+                                    </TreeView>
+
+                                    <!-- Loading overlay -->
+                                    <Border Background="#80252526"
+                                            IsVisible="{Binding SftpSidebar.IsLoading}"
+                                            IsHitTestVisible="False">
+                                        <ProgressBar IsIndeterminate="True"
+                                                     Width="30" Height="30"
+                                                     HorizontalAlignment="Center"
+                                                     VerticalAlignment="Center"/>
+                                    </Border>
+                                </Grid>
+                            </Grid>
+                        </DockPanel>
+
+                        <!-- ===== Snippets Sidebar Panel ===== -->
+                        <DockPanel IsVisible="{Binding IsSnippetsSidebarVisible}">
+                            <!-- Snippets toolbar -->
+                            <Border DockPanel.Dock="Top" Padding="4,2"
+                                    Background="{StaticResource ToolbarBackground}"
+                                    BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,0,0,1">
+                                <DockPanel>
+                                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                                        <Button ToolTip.Tip="Add Folder" Click="AddSnippetFolder_Click"
+                                                Classes="chromeless"
+                                                Padding="4" Margin="2,0">
+                                            <mi:MaterialIcon Kind="FolderPlus" Width="14" Height="14"/>
+                                        </Button>
+                                        <Button ToolTip.Tip="Add Snippet" Click="AddSnippet_Click"
+                                                Classes="chromeless"
+                                                Padding="4" Margin="2,0">
+                                            <mi:MaterialIcon Kind="Plus" Width="14" Height="14"/>
+                                        </Button>
+                                    </StackPanel>
+                                    <TextBlock Text="Command Snippets"
+                                               FontSize="11" VerticalAlignment="Center"
+                                               Foreground="#999999" Margin="4,0"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </DockPanel>
+                            </Border>
+
+                            <!-- Snippet tree -->
+                            <TreeView x:Name="SnippetTreeView"
+                                      ItemsSource="{Binding SnippetsSidebar.SnippetTree}"
+                                      Background="Transparent" BorderThickness="0"
+                                      Padding="4"
+                                      DoubleTapped="SnippetTree_DoubleTapped">
+                                <TreeView.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="New Snippet" Click="AddSnippetFromTree_Click">
+                                            <MenuItem.Icon>
+                                                <mi:MaterialIcon Kind="Plus" Width="14" Height="14"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="New Folder" Click="AddSnippetFolderFromTree_Click">
+                                            <MenuItem.Icon>
+                                                <mi:MaterialIcon Kind="FolderPlus" Width="14" Height="14"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                    </ContextMenu>
+                                </TreeView.ContextMenu>
+                                <TreeView.DataTemplates>
+                                    <TreeDataTemplate DataType="vm:SnippetTreeItem"
+                                                      ItemsSource="{Binding Children}">
+                                        <StackPanel Orientation="Horizontal" Margin="2">
+                                            <StackPanel.ContextMenu>
+                                                <ContextMenu>
+                                                    <!-- Snippet-only: Execute -->
+                                                    <MenuItem Header="Execute" Click="ExecuteSnippetTree_Click"
+                                                              IsVisible="{Binding !IsFolder}">
+                                                        <MenuItem.Icon>
+                                                            <mi:MaterialIcon Kind="Play" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <!-- Folder-only: New Snippet Here -->
+                                                    <MenuItem Header="New Snippet Here" Click="AddSnippetInFolder_Click"
+                                                              IsVisible="{Binding IsFolder}">
+                                                        <MenuItem.Icon>
+                                                            <mi:MaterialIcon Kind="Plus" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <!-- Folder-only: New Subfolder -->
+                                                    <MenuItem Header="New Subfolder" Click="AddSnippetSubfolder_Click"
+                                                              IsVisible="{Binding IsFolder}">
+                                                        <MenuItem.Icon>
+                                                            <mi:MaterialIcon Kind="FolderPlus" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <Separator/>
+                                                    <!-- Folder-only: Rename -->
+                                                    <MenuItem Header="Rename" Click="RenameSnippetFolder_Click"
+                                                              IsVisible="{Binding IsFolder}">
+                                                        <MenuItem.Icon>
+                                                            <mi:MaterialIcon Kind="Pencil" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <!-- Snippet-only: Edit -->
+                                                    <MenuItem Header="Edit" Click="EditSnippetTree_Click"
+                                                              IsVisible="{Binding !IsFolder}">
+                                                        <MenuItem.Icon>
+                                                            <mi:MaterialIcon Kind="Pencil" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <Separator/>
+                                                    <!-- Both: Delete -->
+                                                    <MenuItem Header="Delete" Click="DeleteSnippetTree_Click">
+                                                        <MenuItem.Icon>
+                                                            <mi:MaterialIcon Kind="Delete" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                </ContextMenu>
+                                            </StackPanel.ContextMenu>
+                                            <!-- Folder icon -->
+                                            <mi:MaterialIcon Kind="Folder" Width="14" Height="14"
+                                                             Foreground="#dca756"
+                                                             IsVisible="{Binding IsFolder}"
+                                                             Margin="0,0,6,0"/>
+                                            <!-- Snippet icon -->
+                                            <mi:MaterialIcon Kind="CodeBraces" Width="14" Height="14"
+                                                             Foreground="{StaticResource AccentBlueBrush}"
+                                                             IsVisible="{Binding !IsFolder}"
+                                                             Margin="0,0,6,0"/>
+                                            <!-- Normal mode: display name -->
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                                       IsVisible="{Binding !IsEditing}"/>
+                                            <!-- Edit mode: editable name -->
+                                            <TextBox Text="{Binding Name, Mode=TwoWay}"
+                                                     IsVisible="{Binding IsEditing}"
+                                                     MinWidth="100" VerticalAlignment="Center"
+                                                     LostFocus="SnippetFolderTextBox_LostFocus"
+                                                     KeyDown="SnippetFolderTextBox_KeyDown"
+                                                     AttachedToVisualTree="SnippetFolderTextBox_Attached"/>
+                                        </StackPanel>
+                                    </TreeDataTemplate>
+                                </TreeView.DataTemplates>
+                            </TreeView>
+                        </DockPanel>
+                    </Grid>
+                </DockPanel>
+            </Border>
+
+            <!-- Grid Splitter -->
+            <GridSplitter Grid.Column="1" Width="3"
+                          Background="{StaticResource SidebarBorder}"/>
+
+            <!-- Center: Tab Bar + Content -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Tab strip -->
+                <Border Grid.Row="0"
+                        Background="{StaticResource ToolbarBackground}"
+                        BorderBrush="{StaticResource SidebarBorder}"
+                        BorderThickness="0,0,0,1">
+                    <DockPanel>
+                        <!-- "+" new tab button (docked right) -->
+                        <Button DockPanel.Dock="Right"
+                                Click="NewTabButton_Click"
+                                ToolTip.Tip="New Connection"
+                                Classes="chromeless"
+                                Padding="6,4" Margin="2"
+                                VerticalAlignment="Center">
+                            <mi:MaterialIcon Kind="Plus" Width="12" Height="12"
+                                             Foreground="{StaticResource AccentBlueBrush}"/>
+                        </Button>
+
+                        <!-- Tab headers (scrollable) -->
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Disabled">
+                            <StackPanel Orientation="Horizontal">
+                                <!-- Home tab (always first, cannot be closed) -->
+                                <Border Padding="8,6" Margin="0,2,0,0" Cursor="Hand"
+                                        CornerRadius="4,4,0,0"
+                                        Classes.selected="{Binding IsHomeSelected}"
+                                        PointerPressed="HomeTab_Click">
+                                    <Border.Styles>
+                                        <Style Selector="Border">
+                                            <Setter Property="Background" Value="Transparent"/>
+                                        </Style>
+                                        <Style Selector="Border:pointerover">
+                                            <Setter Property="Background" Value="#2a2d2e"/>
+                                        </Style>
+                                        <Style Selector="Border.selected">
+                                            <Setter Property="Background" Value="#1e1e1e"/>
+                                        </Style>
+                                    </Border.Styles>
+                                    <StackPanel Orientation="Horizontal">
+                                        <mi:MaterialIcon Kind="Home" Width="14" Height="14"
+                                                         Foreground="{StaticResource AccentBlueBrush}"
+                                                         Margin="0,0,6,0"
+                                                         VerticalAlignment="Center"/>
+                                        <TextBlock Text="Home" VerticalAlignment="Center" FontSize="12"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Session tabs -->
+                                <ListBox Classes="tabStrip"
+                                         ItemsSource="{Binding Tabs}"
+                                         SelectedItem="{Binding SelectedTab, Mode=TwoWay}"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                                    <ListBox.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ListBox.ItemsPanel>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" Margin="2,0">
+                                                <StackPanel.ContextMenu>
+                                                    <ContextMenu>
+                                                        <MenuItem Header="Close" Click="TabClose_Click">
+                                                            <MenuItem.Icon>
+                                                                <mi:MaterialIcon Kind="Close" Width="14" Height="14"/>
+                                                            </MenuItem.Icon>
+                                                        </MenuItem>
+                                                        <MenuItem Header="Close Others" Click="TabCloseOthers_Click"/>
+                                                        <MenuItem Header="Close All" Click="TabCloseAll_Click"/>
+                                                        <MenuItem Header="Close Tabs to the Right" Click="TabCloseToRight_Click"/>
+                                                        <Separator/>
+                                                        <MenuItem Header="Duplicate" Click="TabDuplicate_Click">
+                                                            <MenuItem.Icon>
+                                                                <mi:MaterialIcon Kind="ContentCopy" Width="14" Height="14"/>
+                                                            </MenuItem.Icon>
+                                                        </MenuItem>
+                                                        <Separator/>
+                                                        <MenuItem Header="Reconnect" Click="TabReconnect_Click">
+                                                            <MenuItem.Icon>
+                                                                <mi:MaterialIcon Kind="Refresh" Width="14" Height="14"/>
+                                                            </MenuItem.Icon>
+                                                        </MenuItem>
+                                                    </ContextMenu>
+                                                </StackPanel.ContextMenu>
+                                                <!-- Status dot -->
+                                                <Ellipse Width="8" Height="8" Margin="0,0,6,0"
+                                                         Fill="{Binding IsConnected, Converter={StaticResource StatusToColor}}"/>
+                                                <TextBlock Text="{Binding Title}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <!-- Close button -->
+                                                <Button Click="TabCloseButton_Click"
+                                                        ToolTip.Tip="Close"
+                                                        Classes="chromeless"
+                                                        Padding="2"
+                                                        Width="18" Height="18">
+                                                    <mi:MaterialIcon Kind="Close" Width="10" Height="10"/>
+                                                </Button>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+
+                <!-- Content area -->
+                <Grid Grid.Row="1">
+                    <!-- Home view (visible when IsHomeSelected is true) -->
+                    <Border Background="#1e1e1e"
+                            IsVisible="{Binding IsHomeSelected}">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <mi:MaterialIcon Kind="Console" Width="64" Height="64"
+                                             Foreground="#333333" HorizontalAlignment="Center"
+                                             Margin="0,0,0,16"/>
+                            <TextBlock Text="WinSTerm" FontSize="28" FontWeight="Light"
+                                       Foreground="#555555" HorizontalAlignment="Center"
+                                       Margin="0,0,0,8"/>
+                            <TextBlock Text="Enter a host above or double-click a session to connect"
+                                       FontSize="13" Foreground="#444444" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Session tab content (visible when a session tab is selected) -->
+                    <ContentControl Content="{Binding SelectedTab}"
+                                    IsVisible="{Binding !IsHomeSelected}">
+                        <ContentControl.ContentTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Terminal Control -->
+                                    <views:TerminalControl Grid.Row="0" />
+
+                                    <!-- SFTP Toggle bar -->
+                                    <Border Grid.Row="1"
+                                            Background="{StaticResource ToolbarBackground}"
+                                            BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,1,0,0"
+                                            Padding="4,2">
+                                        <DockPanel>
+                                            <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                                                <Ellipse Width="8" Height="8" Margin="0,0,6,0"
+                                                         Fill="{Binding IsConnected, Converter={StaticResource StatusToColor}}"/>
+                                                <TextBlock Text="{Binding StatusText}" FontSize="11" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <ToggleButton x:Name="SftpToggle"
+                                                          DockPanel.Dock="Right"
+                                                          HorizontalAlignment="Right"
+                                                          IsChecked="False"
+                                                          ToolTip.Tip="Toggle SFTP Browser"
+                                                          Padding="6,2">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <mi:MaterialIcon Kind="FolderNetwork" Width="14" Height="14" Margin="0,0,4,0"/>
+                                                    <TextBlock Text="SFTP" FontSize="11"/>
+                                                </StackPanel>
+                                            </ToggleButton>
+                                        </DockPanel>
+                                    </Border>
+
+                                    <!-- SFTP Browser (collapsible) -->
+                                    <views:SftpBrowserControl Grid.Row="2"
+                                        DataContext="{Binding SftpBrowserViewModel}"
+                                        Height="250"
+                                        IsVisible="{Binding #SftpToggle.IsChecked}"/>
+
+                                </Grid>
+                            </DataTemplate>
+                        </ContentControl.ContentTemplate>
+                    </ContentControl>
+                </Grid>
+            </Grid>
+        </Grid>
+    </DockPanel>
 </Window>

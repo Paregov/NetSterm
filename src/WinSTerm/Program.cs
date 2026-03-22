@@ -1,5 +1,6 @@
 using System;
 using Avalonia;
+using Avalonia.WebView.Desktop;
 
 namespace WinSTerm;
 
@@ -13,5 +14,6 @@ class Program
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .WithInterFont()
-            .LogToTrace();
+            .LogToTrace()
+            .UseDesktopWebView();
 }

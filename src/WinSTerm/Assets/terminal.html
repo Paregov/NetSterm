@@ -23,6 +23,33 @@
     (function () {
       'use strict';
 
+      // --- Cross-platform message bridge ---
+      // WebView.Avalonia uses different engines per platform:
+      //   Windows: WebView2 (chrome.webview)
+      //   macOS:   WKWebView (webkit.messageHandlers)
+      //   Linux:   WebKitGTK (webkit.messageHandlers)
+      var bridge = {
+        postMessage: function (msg) {
+          if (window.chrome && window.chrome.webview) {
+            window.chrome.webview.postMessage(msg);
+          } else if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.webview) {
+            window.webkit.messageHandlers.webview.postMessage(msg);
+          } else {
+            console.warn('No WebView bridge available');
+          }
+        },
+        onMessage: function (handler) {
+          if (window.chrome && window.chrome.webview) {
+            window.chrome.webview.addEventListener('message', handler);
+          }
+          // For WKWebView/WebKitGTK, the C# host calls ExecuteScriptAsync
+          // to push data. We expose a global receiver function as fallback.
+          window._onHostMessage = function (data) {
+            handler({ data: data });
+          };
+        }
+      };
+
       // --- Theme (VS Code Dark / MobaXterm-like) ---
       const theme = {
         background:       '#1e1e1e',
@@ -85,7 +112,7 @@
           }
         }
         if (path) {
-          window.chrome.webview.postMessage(JSON.stringify({ type: 'cwd', path: path }));
+          bridge.postMessage(JSON.stringify({ type: 'cwd', path: path }));
         }
         return false;
       });
@@ -93,17 +120,17 @@
       // --- Welcome message ---
       term.write('\x1b[2m WinSTerm \u2013 Connecting\u2026\x1b[0m\r\n');
 
-      // --- Input → C# ---
+      // --- Input -> C# ---
       term.onData(function (data) {
-        window.chrome.webview.postMessage(JSON.stringify({ type: 'input', data: data }));
+        bridge.postMessage(JSON.stringify({ type: 'input', data: data }));
       });
 
       term.onBinary(function (data) {
-        window.chrome.webview.postMessage(JSON.stringify({ type: 'input', data: data }));
+        bridge.postMessage(JSON.stringify({ type: 'input', data: data }));
       });
 
-      // --- C# → Terminal ---
-      window.chrome.webview.addEventListener('message', function (event) {
+      // --- C# -> Terminal ---
+      bridge.onMessage(function (event) {
         try {
           var msg = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
           if (msg.type === 'output' && msg.data != null) {
@@ -116,7 +143,7 @@
       var resizeTimer = null;
       function notifyResize() {
         fitAddon.fit();
-        window.chrome.webview.postMessage(JSON.stringify({
+        bridge.postMessage(JSON.stringify({
           type: 'resize',
           cols: term.cols,
           rows: term.rows
@@ -149,7 +176,7 @@
         if (event.ctrlKey && !event.shiftKey && event.key === 'v') {
           navigator.clipboard.readText().then(function (text) {
             if (text) {
-              window.chrome.webview.postMessage(JSON.stringify({ type: 'input', data: text }));
+              bridge.postMessage(JSON.stringify({ type: 'input', data: text }));
             }
           });
           return false;
