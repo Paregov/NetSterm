@@ -22,6 +22,41 @@
         <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis"/>
         <converters:NullToVisibilityConverter x:Key="NullToVis"/>
         <converters:InverseNullToVisibilityConverter x:Key="NullToCollapsed"/>
+        <converters:InverseBoolConverter x:Key="InverseBool"/>
+        <converters:FileSizeConverter x:Key="FileSizeConverter"/>
+
+        <!-- Sidebar tab toggle style (RadioButton as flat tab) -->
+        <Style x:Key="SidebarTabStyle" TargetType="RadioButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="border"
+                                Background="Transparent"
+                                BorderThickness="0,0,0,2"
+                                BorderBrush="Transparent"
+                                Padding="8,6">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush"
+                                        Value="{StaticResource AccentBlueBrush}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="False">
+                                <Setter Property="Foreground" Value="#999"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#3e3e42"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </mah:MetroWindow.Resources>
 
     <DockPanel LastChildFill="True">
@@ -154,23 +189,64 @@
                               Background="Transparent" BorderThickness="0"
                               Padding="4"
                               MouseDoubleClick="SessionTree_MouseDoubleClick">
+                        <TreeView.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="New Connection" Click="NewConnectionFromTree_Click">
+                                    <MenuItem.Icon>
+                                        <iconPacks:PackIconMaterial Kind="Plus" Width="14" Height="14"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="New Folder" Click="NewFolderFromTree_Click">
+                                    <MenuItem.Icon>
+                                        <iconPacks:PackIconMaterial Kind="FolderPlus" Width="14" Height="14"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                            </ContextMenu>
+                        </TreeView.ContextMenu>
                         <TreeView.Resources>
                             <HierarchicalDataTemplate DataType="{x:Type vm:SessionTreeItem}"
                                                        ItemsSource="{Binding Children}">
                                 <StackPanel Orientation="Horizontal" Margin="2">
                                     <StackPanel.ContextMenu>
                                         <ContextMenu>
-                                            <MenuItem Header="Connect" Click="ConnectMenuItem_Click">
+                                            <!-- Connection-only: Connect -->
+                                            <MenuItem Header="Connect" Click="ConnectMenuItem_Click"
+                                                      Visibility="{Binding IsFolder, Converter={StaticResource InverseBoolToVis}}">
                                                 <MenuItem.Icon>
                                                     <iconPacks:PackIconMaterial Kind="Connection" Width="14" Height="14"/>
                                                 </MenuItem.Icon>
                                             </MenuItem>
-                                            <MenuItem Header="Edit" Click="EditMenuItem_Click">
+                                            <!-- Folder-only: New Connection Here -->
+                                            <MenuItem Header="New Connection Here" Click="NewConnectionInFolder_Click"
+                                                      Visibility="{Binding IsFolder, Converter={StaticResource BoolToVis}}">
+                                                <MenuItem.Icon>
+                                                    <iconPacks:PackIconMaterial Kind="Plus" Width="14" Height="14"/>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <!-- Folder-only: New Subfolder -->
+                                            <MenuItem Header="New Subfolder" Click="NewSubfolderInFolder_Click"
+                                                      Visibility="{Binding IsFolder, Converter={StaticResource BoolToVis}}">
+                                                <MenuItem.Icon>
+                                                    <iconPacks:PackIconMaterial Kind="FolderPlus" Width="14" Height="14"/>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <Separator/>
+                                            <!-- Folder-only: Rename -->
+                                            <MenuItem Header="Rename" Click="RenameItem_Click"
+                                                      Visibility="{Binding IsFolder, Converter={StaticResource BoolToVis}}">
+                                                <MenuItem.Icon>
+                                                    <iconPacks:PackIconMaterial Kind="Pencil" Width="14" Height="14"/>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <!-- Connection-only: Edit -->
+                                            <MenuItem Header="Edit" Click="EditMenuItem_Click"
+                                                      Visibility="{Binding IsFolder, Converter={StaticResource InverseBoolToVis}}">
                                                 <MenuItem.Icon>
                                                     <iconPacks:PackIconMaterial Kind="Pencil" Width="14" Height="14"/>
                                                 </MenuItem.Icon>
                                             </MenuItem>
                                             <Separator/>
+                                            <!-- Both: Delete -->
                                             <MenuItem Header="Delete" Click="DeleteMenuItem_Click">
                                                 <MenuItem.Icon>
                                                     <iconPacks:PackIconMaterial Kind="Delete" Width="14" Height="14"/>
@@ -188,7 +264,16 @@
                                                                 Foreground="{StaticResource AccentBlueBrush}"
                                                                 Visibility="{Binding IsFolder, Converter={StaticResource InverseBoolToVis}}"
                                                                 Margin="0,0,6,0"/>
-                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                                    <!-- Normal mode: display name -->
+                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                               Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolToVis}}"/>
+                                    <!-- Edit mode: editable name -->
+                                    <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                             Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"
+                                             MinWidth="100" VerticalAlignment="Center"
+                                             LostFocus="TreeItemTextBox_LostFocus"
+                                             PreviewKeyDown="TreeItemTextBox_KeyDown"
+                                             Loaded="TreeItemTextBox_Loaded"/>
                                 </StackPanel>
                             </HierarchicalDataTemplate>
                         </TreeView.Resources>

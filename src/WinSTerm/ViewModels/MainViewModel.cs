@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
@@ -18,6 +19,10 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty] private SessionTabViewModel? _selectedTab;
 
+    // SFTP sidebar
+    public SftpSidebarViewModel SftpSidebar { get; } = new();
+    [ObservableProperty] private bool _isSftpSidebarVisible;
+
     // Quick connect fields
     [ObservableProperty] private string _quickHost = "";
     [ObservableProperty] private string _quickUsername = "";
@@ -30,6 +35,38 @@ public partial class MainViewModel : ObservableObject
     public MainViewModel()
     {
         LoadSessionTree();
+    }
+
+    partial void OnSelectedTabChanged(SessionTabViewModel? oldValue, SessionTabViewModel? newValue)
+    {
+        if (oldValue != null)
+            oldValue.PropertyChanged -= OnSelectedTabPropertyChanged;
+
+        if (newValue != null)
+            newValue.PropertyChanged += OnSelectedTabPropertyChanged;
+
+        UpdateSftpSidebar();
+    }
+
+    private void OnSelectedTabPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SessionTabViewModel.IsConnected))
+            UpdateSftpSidebar();
+    }
+
+    private void UpdateSftpSidebar()
+    {
+        if (SelectedTab?.IsConnected == true && SelectedTab.SftpService.IsConnected)
+        {
+            SftpSidebar.AttachToTab(SelectedTab);
+            IsSftpSidebarVisible = true;
+        }
+        else
+        {
+            SftpSidebar.AttachToTab(null);
+            if (SelectedTab == null)
+                IsSftpSidebarVisible = false;
+        }
     }
 
     public void LoadSessionTree()
@@ -222,5 +259,56 @@ public partial class MainViewModel : ObservableObject
         else
             _storage.DeleteConnection(item.Id);
         LoadSessionTree();
+    }
+
+    public void AddFolderWithInPlaceEdit(string? parentFolderId)
+    {
+        var folder = new ConnectionFolder { Name = "New Folder", ParentFolderId = parentFolderId };
+        _storage.AddFolder(folder);
+        LoadSessionTree();
+
+        var newItem = FindTreeItem(folder.Id);
+        if (newItem == null) return;
+
+        newItem.IsEditing = true;
+        newItem.IsSelected = true;
+
+        if (parentFolderId != null)
+        {
+            var parent = FindTreeItem(parentFolderId);
+            if (parent != null) parent.IsExpanded = true;
+        }
+    }
+
+    public void CommitFolderRename(SessionTreeItem item)
+    {
+        if (!item.IsFolder || string.IsNullOrWhiteSpace(item.Name)) return;
+
+        var folder = _storage.Store.Folders.FirstOrDefault(f => f.Id == item.Id);
+        if (folder == null) return;
+
+        folder.Name = item.Name.Trim();
+        _storage.Save();
+    }
+
+    public void CancelFolderRename(SessionTreeItem item)
+    {
+        LoadSessionTree();
+    }
+
+    private SessionTreeItem? FindTreeItem(string id)
+    {
+        return FindInCollection(SessionTree, id);
+    }
+
+    private static SessionTreeItem? FindInCollection(IEnumerable<SessionTreeItem> items, string id)
+    {
+        foreach (var item in items)
+        {
+            if (item.Id == id) return item;
+            var found = FindInCollection(item.Children, id);
+            if (found != null) return found;
+        }
+        return null;
     }
 }

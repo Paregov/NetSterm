@@ -9,6 +9,7 @@ public partial class SessionTreeItem : ObservableObject
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private bool _isExpanded = true;
     [ObservableProperty] private bool _isSelected;
+    [ObservableProperty] private bool _isEditing;
 
     public string Id { get; set; } = "";
     public bool IsFolder { get; set; }

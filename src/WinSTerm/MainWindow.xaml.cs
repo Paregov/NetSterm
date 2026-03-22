@@ -82,6 +82,84 @@ public partial class MainWindow : MetroWindow
         }
     }
 
+    private void NewConnectionFromTree_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new ConnectionDialog() { Owner = this };
+        if (dialog.ShowDialog() == true && dialog.Result != null)
+            ViewModel.SaveConnection(dialog.Result);
+    }
+
+    private void NewFolderFromTree_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.AddFolderWithInPlaceEdit(null);
+    }
+
+    private void NewConnectionInFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetTreeItemFromMenuItem(sender) is { IsFolder: true } folder)
+        {
+            var info = new ConnectionInfo { FolderId = folder.Id };
+            var dialog = new ConnectionDialog(info) { Owner = this };
+            if (dialog.ShowDialog() == true && dialog.Result != null)
+            {
+                dialog.Result.FolderId = folder.Id;
+                ViewModel.SaveConnection(dialog.Result);
+            }
+        }
+    }
+
+    private void NewSubfolderInFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetTreeItemFromMenuItem(sender) is { IsFolder: true } folder)
+        {
+            ViewModel.AddFolderWithInPlaceEdit(folder.Id);
+        }
+    }
+
+    private void RenameItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetTreeItemFromMenuItem(sender) is { IsFolder: true } item)
+        {
+            item.IsEditing = true;
+        }
+    }
+
+    private void TreeItemTextBox_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is TextBox tb)
+        {
+            tb.Focus();
+            tb.SelectAll();
+        }
+    }
+
+    private void TreeItemTextBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (sender is TextBox { DataContext: SessionTreeItem item } && item.IsEditing)
+        {
+            item.IsEditing = false;
+            ViewModel.CommitFolderRename(item);
+        }
+    }
+
+    private void TreeItemTextBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (sender is not TextBox { DataContext: SessionTreeItem item }) return;
+
+        if (e.Key == Key.Enter)
+        {
+            item.IsEditing = false;
+            ViewModel.CommitFolderRename(item);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape)
+        {
+            item.IsEditing = false;
+            ViewModel.CancelFolderRename(item);
+            e.Handled = true;
+        }
+    }
+
     private async Task ConnectToSession(ConnectionInfo info)
     {
         await ViewModel.OpenSession(info);
