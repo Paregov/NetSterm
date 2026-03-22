@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-    Build and package WinSTerm.
+    Build and package NetSterm.
 
 .DESCRIPTION
-    Publishes WinSTerm as a self-contained single-file executable, then
+    Publishes NetSterm as a self-contained single-file executable, then
     creates an installer via Inno Setup. Falls back to a portable ZIP
     when Inno Setup is not installed.
 
@@ -24,7 +24,7 @@ $repoRoot    = $PSScriptRoot
 $publishDir  = Join-Path $repoRoot "publish"
 $installerDir = Join-Path $repoRoot "installer"
 $outputDir   = Join-Path $installerDir "output"
-$projectFile = Join-Path $repoRoot "src\WinSTerm\WinSTerm.csproj"
+$projectFile = Join-Path $repoRoot "src\NetSterm\NetSterm.csproj"
 
 # --- Clean previous artifacts ---
 if (Test-Path $publishDir) { Remove-Item $publishDir -Recurse -Force }
@@ -33,7 +33,7 @@ New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 
 # --- Publish ---
 if (-not $SkipBuild) {
-    Write-Host "Publishing WinSTerm..." -ForegroundColor Cyan
+    Write-Host "Publishing NetSterm..." -ForegroundColor Cyan
 
     dotnet publish $projectFile `
         -c Release `
@@ -67,7 +67,7 @@ else {
 # --- Build installer or ZIP ---
 if ($isccPath -and -not $CreateZip) {
     Write-Host "Building installer with Inno Setup..." -ForegroundColor Cyan
-    & $isccPath (Join-Path $installerDir "winsterm-setup.iss")
+    & $isccPath (Join-Path $installerDir "netsterm-setup.iss")
     if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed with exit code $LASTEXITCODE" }
     Write-Host "Installer created in $outputDir" -ForegroundColor Green
 }
@@ -78,7 +78,7 @@ else {
     else {
         Write-Host "Creating portable ZIP (CreateZip flag)..." -ForegroundColor Cyan
     }
-    $zipPath = Join-Path $outputDir "WinSTerm-portable.zip"
+    $zipPath = Join-Path $outputDir "NetSterm-portable.zip"
     Compress-Archive -Path (Join-Path $publishDir "*") -DestinationPath $zipPath -Force
     Write-Host "Created: $zipPath" -ForegroundColor Green
 }

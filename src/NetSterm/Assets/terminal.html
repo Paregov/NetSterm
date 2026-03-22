@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NetSterm Terminal</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5/css/xterm.min.css" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #1e1e1e; }
+    #terminal { width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="terminal"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5/lib/xterm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0/lib/addon-fit.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-search@0/lib/addon-search.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-web-links@0/lib/addon-web-links.min.js"></script>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // --- Cross-platform message bridge ---
+      // WebView.Avalonia uses different engines per platform:
+      //   Windows: WebView2 (chrome.webview)
+      //   macOS:   WKWebView (webkit.messageHandlers)
+      //   Linux:   WebKitGTK (webkit.messageHandlers)
+      var bridge = {
+        postMessage: function (msg) {
+          if (window.chrome && window.chrome.webview) {
+            window.chrome.webview.postMessage(msg);
+          } else if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.webview) {
+            window.webkit.messageHandlers.webview.postMessage(msg);
+          } else {
+            console.warn('No WebView bridge available');
+          }
+        },
+        onMessage: function (handler) {
+          if (window.chrome && window.chrome.webview) {
+            window.chrome.webview.addEventListener('message', handler);
+          }
+          // For WKWebView/WebKitGTK, the C# host calls ExecuteScriptAsync
+          // to push data. We expose a global receiver function as fallback.
+          window._onHostMessage = function (data) {
+            handler({ data: data });
+          };
+        }
+      };
+
+      // --- Theme (VS Code Dark / MobaXterm-like) ---
+      const theme = {
+        background:       '#1e1e1e',
+        foreground:       '#cccccc',
+        cursor:           '#ffffff',
+        cursorAccent:     '#1e1e1e',
+        selectionBackground: 'rgba(255,255,255,0.3)',
+        black:            '#000000',
+        red:              '#cd3131',
+        green:            '#0dbc79',
+        yellow:           '#e5e510',
+        blue:             '#2472c8',
+        magenta:          '#bc3fbc',
+        cyan:             '#11a8cd',
+        white:            '#e5e5e5',
+        brightBlack:      '#666666',
+        brightRed:        '#f14c4c',
+        brightGreen:      '#23d18b',
+        brightYellow:     '#f5f543',
+        brightBlue:       '#3b8eea',
+        brightMagenta:    '#d670d6',
+        brightCyan:       '#29b8db',
+        brightWhite:      '#ffffff'
+      };
+
+      // --- Create terminal ---
+      const term = new Terminal({
+        theme: theme,
+        fontFamily: '"Cascadia Code", "Consolas", "Courier New", monospace',
+        fontSize: 14,
+        cursorBlink: true,
+        cursorStyle: 'block',
+        allowProposedApi: true,
+        scrollback: 10000
+      });
+
+      // --- Addons ---
+      const fitAddon    = new FitAddon.FitAddon();
+      const searchAddon = new SearchAddon.SearchAddon();
+      const webLinksAddon = new WebLinksAddon.WebLinksAddon();
+
+      term.loadAddon(fitAddon);
+      term.loadAddon(searchAddon);
+      term.loadAddon(webLinksAddon);
+
+      // --- Mount ---
+      term.open(document.getElementById('terminal'));
+      fitAddon.fit();
+
+      // --- CWD detection via OSC 7 ---
+      term.parser.registerOscHandler(7, function(data) {
+        var path = data;
+        if (data.startsWith('file://')) {
+          try {
+            var url = new URL(data);
+            path = decodeURIComponent(url.pathname);
+          } catch(e) {
+            var idx = data.indexOf('/', 7);
+            if (idx >= 0) path = data.substring(idx);
+          }
+        }
+        if (path) {
+          bridge.postMessage(JSON.stringify({ type: 'cwd', path: path }));
+        }
+        return false;
+      });
+
+      // --- Welcome message ---
+      term.write('\x1b[2m NetSterm \u2013 Connecting\u2026\x1b[0m\r\n');
+
+      // --- Input -> C# ---
+      term.onData(function (data) {
+        bridge.postMessage(JSON.stringify({ type: 'input', data: data }));
+      });
+
+      term.onBinary(function (data) {
+        bridge.postMessage(JSON.stringify({ type: 'input', data: data }));
+      });
+
+      // --- C# -> Terminal ---
+      bridge.onMessage(function (event) {
+        try {
+          var msg = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+          if (msg.type === 'output' && msg.data != null) {
+            term.write(msg.data);
+          }
+        } catch (_) { /* ignore malformed messages */ }
+      });
+
+      // --- Resize handling with debounce ---
+      var resizeTimer = null;
+      function notifyResize() {
+        fitAddon.fit();
+        bridge.postMessage(JSON.stringify({
+          type: 'resize',
+          cols: term.cols,
+          rows: term.rows
+        }));
+      }
+
+      window.addEventListener('resize', function () {
+        if (resizeTimer) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(notifyResize, 100);
+      });
+
+      // Send initial size after a short delay so layout settles
+      setTimeout(notifyResize, 50);
+
+      // --- Clipboard: Ctrl+C (copy when selection) / Ctrl+V (paste) ---
+      term.attachCustomKeyEventHandler(function (event) {
+        if (event.type !== 'keydown') return true;
+
+        // Ctrl+C with active selection → copy
+        if (event.ctrlKey && !event.shiftKey && event.key === 'c') {
+          var sel = term.getSelection();
+          if (sel) {
+            navigator.clipboard.writeText(sel);
+            term.clearSelection();
+            return false; // prevent sending ^C
+          }
+        }
+
+        // Ctrl+V → paste
+        if (event.ctrlKey && !event.shiftKey && event.key === 'v') {
+          navigator.clipboard.readText().then(function (text) {
+            if (text) {
+              bridge.postMessage(JSON.stringify({ type: 'input', data: text }));
+            }
+          });
+          return false;
+        }
+
+        return true;
+      });
+
+      // --- Exposed API for C# interop ---
+      window.terminalSearch = function (query) {
+        if (query) searchAddon.findNext(query);
+      };
+
+      window.terminalSearchNext = function () {
+        searchAddon.findNext();
+      };
+
+      window.terminalSearchPrevious = function () {
+        searchAddon.findPrevious();
+      };
+
+      window.terminalClear = function () {
+        term.clear();
+      };
+
+      window.terminalFocus = function () {
+        term.focus();
+      };
+    })();
+  </script>
+</body>
+</html>
