@@ -29,6 +29,9 @@ public partial class SettingsDialogViewModel : ObservableObject
     [ObservableProperty] private string _defaultLocalDirectory;
     [ObservableProperty] private bool _showHiddenFiles;
 
+    // Security
+    [ObservableProperty] private bool _isMasterPasswordEnabled;
+
     public List<string> FontFamilies { get; } =
     [
         "Cascadia Code",
@@ -65,6 +68,8 @@ public partial class SettingsDialogViewModel : ObservableObject
 
         _defaultLocalDirectory = settings.DefaultLocalDirectory;
         _showHiddenFiles = settings.ShowHiddenFiles;
+
+        _isMasterPasswordEnabled = settings.IsMasterPasswordEnabled;
     }
 
     [RelayCommand]
@@ -84,7 +89,12 @@ public partial class SettingsDialogViewModel : ObservableObject
             ConfirmOnCloseTab = ConfirmOnCloseTab,
             ConfirmOnExit = ConfirmOnExit,
             DefaultLocalDirectory = DefaultLocalDirectory,
-            ShowHiddenFiles = ShowHiddenFiles
+            ShowHiddenFiles = ShowHiddenFiles,
+
+            // Security: hash and salt are managed by MasterPasswordService, preserve from current
+            IsMasterPasswordEnabled = IsMasterPasswordEnabled,
+            MasterPasswordHash = SettingsService.Instance.Current.MasterPasswordHash,
+            MasterPasswordSalt = SettingsService.Instance.Current.MasterPasswordSalt
         };
 
         SettingsService.Instance.Apply(settings);
