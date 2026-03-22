@@ -341,7 +341,7 @@
 
                         <!-- ===== SFTP Sidebar Panel ===== -->
                         <DockPanel Visibility="{Binding IsSftpSidebarVisible, Converter={StaticResource BoolToVis}}">
-                            <!-- SFTP toolbar: host label + refresh -->
+                            <!-- SFTP toolbar: path + up + refresh -->
                             <Border DockPanel.Dock="Top" Padding="4,2"
                                     Background="{StaticResource ToolbarBackground}"
                                     BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,0,0,1">
@@ -352,10 +352,17 @@
                                             Padding="4" Margin="2,0" DockPanel.Dock="Right">
                                         <iconPacks:PackIconMaterial Kind="Refresh" Width="14" Height="14"/>
                                     </Button>
-                                    <TextBlock Text="{Binding SftpSidebar.HostLabel}"
+                                    <Button Command="{Binding SftpSidebar.NavigateUpCommand}"
+                                            ToolTip="Go to parent directory"
+                                            Style="{StaticResource MahApps.Styles.Button.Chromeless}"
+                                            Padding="4" Margin="2,0" DockPanel.Dock="Right">
+                                        <iconPacks:PackIconMaterial Kind="ArrowUp" Width="14" Height="14"/>
+                                    </Button>
+                                    <TextBlock Text="{Binding SftpSidebar.CurrentPath}"
                                                FontSize="11" VerticalAlignment="Center"
                                                Foreground="#999" Margin="4,0"
-                                               TextTrimming="CharacterEllipsis"/>
+                                               TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding SftpSidebar.CurrentPath}"/>
                                 </DockPanel>
                             </Border>
 
@@ -378,7 +385,11 @@
                                               ItemsSource="{Binding SftpSidebar.RootNodes}"
                                               Background="Transparent" BorderThickness="0"
                                               Padding="4"
-                                              MouseDoubleClick="SftpTree_MouseDoubleClick">
+                                              MouseDoubleClick="SftpTree_MouseDoubleClick"
+                                              AllowDrop="True"
+                                              DragOver="SftpTreeView_DragOver"
+                                              DragLeave="SftpTreeView_DragLeave"
+                                              Drop="SftpTreeView_Drop">
                                         <TreeView.Resources>
                                             <HierarchicalDataTemplate DataType="{x:Type vm:SftpTreeNode}"
                                                                        ItemsSource="{Binding Children}">
@@ -404,6 +415,11 @@
                                                             <MenuItem Header="New Folder" Click="SftpNewFolder_Click">
                                                                 <MenuItem.Icon>
                                                                     <iconPacks:PackIconMaterial Kind="FolderPlus" Width="14" Height="14"/>
+                                                                </MenuItem.Icon>
+                                                            </MenuItem>
+                                                            <MenuItem Header="Upload Files Here..." Click="SftpUploadHere_Click">
+                                                                <MenuItem.Icon>
+                                                                    <iconPacks:PackIconMaterial Kind="Upload" Width="14" Height="14"/>
                                                                 </MenuItem.Icon>
                                                             </MenuItem>
                                                         </ContextMenu>

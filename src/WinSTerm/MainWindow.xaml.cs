@@ -493,6 +493,92 @@ public partial class MainWindow : MetroWindow
         }
     }
 
+    private void SftpTreeView_DragOver(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent(DataFormats.FileDrop) && ViewModel.SftpSidebar.IsConnected)
+        {
+            e.Effects = DragDropEffects.Copy;
+        }
+        else
+        {
+            e.Effects = DragDropEffects.None;
+        }
+        e.Handled = true;
+    }
+
+    private void SftpTreeView_DragLeave(object sender, DragEventArgs e)
+    {
+        e.Handled = true;
+    }
+
+    private async void SftpTreeView_Drop(object sender, DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+        if (!ViewModel.SftpSidebar.IsConnected) return;
+
+        var files = e.Data.GetData(DataFormats.FileDrop) as string[];
+        if (files == null || files.Length == 0) return;
+
+        string targetPath = "/";
+
+        if (e.OriginalSource is DependencyObject source)
+        {
+            var treeViewItem = FindVisualParent<TreeViewItem>(source);
+            if (treeViewItem?.DataContext is SftpTreeNode { IsDirectory: true } folderNode)
+            {
+                targetPath = folderNode.FullPath;
+            }
+        }
+
+        try
+        {
+            await ViewModel.SftpSidebar.UploadFilesAsync(files, targetPath);
+            ViewModel.StatusMessage = $"Uploaded {files.Length} file(s) to {targetPath}";
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Upload failed:\n{ex.Message}", "Upload Error",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async void SftpUploadHere_Click(object sender, RoutedEventArgs e)
+    {
+        var targetPath = "/";
+        if (GetSftpNodeFromMenuItem(sender) is { IsDirectory: true } node)
+            targetPath = node.FullPath;
+
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Multiselect = true,
+            Title = "Select files to upload"
+        };
+
+        if (dialog.ShowDialog() != true) return;
+
+        try
+        {
+            await ViewModel.SftpSidebar.UploadFilesAsync(dialog.FileNames, targetPath);
+            ViewModel.StatusMessage = $"Uploaded {dialog.FileNames.Length} file(s) to {targetPath}";
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Upload failed:\n{ex.Message}", "Upload Error",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private static T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+    {
+        var parent = System.Windows.Media.VisualTreeHelper.GetParent(child);
+        while (parent != null)
+        {
+            if (parent is T t) return t;
+            parent = System.Windows.Media.VisualTreeHelper.GetParent(parent);
+        }
+        return null;
+    }
+
     private static SftpTreeNode? GetSftpNodeFromMenuItem(object sender)
     {
         if (sender is MenuItem menuItem
