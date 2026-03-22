@@ -17,9 +17,11 @@ public sealed class SnippetStorageService
 
     private readonly string _filePath;
     private readonly object _lock = new();
-    private List<CommandSnippet> _snippets;
+    private SnippetStore _store;
 
     public static SnippetStorageService Instance => s_instance.Value;
+
+    public SnippetStore Store => _store;
 
     private SnippetStorageService()
     {
@@ -27,14 +29,14 @@ public sealed class SnippetStorageService
         var dir = Path.Combine(appData, "WinSTerm");
         Directory.CreateDirectory(dir);
         _filePath = Path.Combine(dir, "snippets.json");
-        _snippets = LoadFromDisk();
+        _store = LoadFromDisk();
     }
 
     public List<CommandSnippet> GetSnippets()
     {
         lock (_lock)
         {
-            return new List<CommandSnippet>(_snippets);
+            return new List<CommandSnippet>(_store.Snippets);
         }
     }
 
@@ -44,7 +46,7 @@ public sealed class SnippetStorageService
 
         lock (_lock)
         {
-            _snippets.Add(snippet);
+            _store.Snippets.Add(snippet);
             Save();
         }
     }
@@ -55,10 +57,10 @@ public sealed class SnippetStorageService
 
         lock (_lock)
         {
-            var index = _snippets.FindIndex(s => s.Id == snippet.Id);
+            var index = _store.Snippets.FindIndex(s => s.Id == snippet.Id);
             if (index >= 0)
             {
-                _snippets[index] = snippet;
+                _store.Snippets[index] = snippet;
                 Save();
             }
         }
@@ -68,32 +70,73 @@ public sealed class SnippetStorageService
     {
         lock (_lock)
         {
-            _snippets.RemoveAll(s => s.Id == snippetId);
+            _store.Snippets.RemoveAll(s => s.Id == snippetId);
             Save();
         }
     }
 
-    private void Save()
+    public void AddFolder(SnippetFolder folder)
     {
-        var json = JsonSerializer.Serialize(_snippets, s_jsonOptions);
+        if (folder == null) throw new ArgumentNullException(nameof(folder));
+
+        lock (_lock)
+        {
+            _store.Folders.Add(folder);
+            Save();
+        }
+    }
+
+    public void DeleteFolder(string folderId)
+    {
+        lock (_lock)
+        {
+            DeleteFolderRecursive(folderId);
+            Save();
+        }
+    }
+
+    public void Save()
+    {
+        var json = JsonSerializer.Serialize(_store, s_jsonOptions);
         var tempPath = _filePath + ".tmp";
         File.WriteAllText(tempPath, json);
         File.Move(tempPath, _filePath, overwrite: true);
     }
 
-    private List<CommandSnippet> LoadFromDisk()
+    private void DeleteFolderRecursive(string folderId)
+    {
+        _store.Snippets.RemoveAll(s => s.FolderId == folderId);
+
+        var subFolders = _store.Folders.Where(f => f.ParentFolderId == folderId).ToList();
+        foreach (var sub in subFolders)
+            DeleteFolderRecursive(sub.Id);
+
+        _store.Folders.RemoveAll(f => f.Id == folderId);
+    }
+
+    private SnippetStore LoadFromDisk()
     {
         if (!File.Exists(_filePath))
-            return [];
+            return new SnippetStore();
 
         try
         {
             var json = File.ReadAllText(_filePath);
-            return JsonSerializer.Deserialize<List<CommandSnippet>>(json, s_jsonOptions) ?? [];
+
+            // Backward compatibility: if the file contains a JSON array (old format),
+            // treat it as snippets with no folders.
+            var trimmed = json.TrimStart();
+            if (trimmed.StartsWith('['))
+            {
+                var snippets = JsonSerializer.Deserialize<List<CommandSnippet>>(json, s_jsonOptions) ?? [];
+                return new SnippetStore { Snippets = snippets };
+            }
+
+            return JsonSerializer.Deserialize<SnippetStore>(json, s_jsonOptions) ?? new SnippetStore();
         }
         catch
         {
-            return [];
+            return new SnippetStore();
         }
     }
 }

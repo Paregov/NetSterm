@@ -617,50 +617,134 @@ public partial class MainWindow : MetroWindow
         }
     }
 
-    private void EditSnippet_Click(object sender, RoutedEventArgs e)
+    private void AddSnippetFolder_Click(object sender, RoutedEventArgs e)
     {
-        if (GetSnippetFromMenuItem(sender) is not { } snippet) return;
+        ViewModel.SnippetsSidebar.AddFolderWithInPlaceEdit(null);
+    }
 
-        var dialog = new SnippetEditDialog(snippet) { Owner = this };
+    private void AddSnippetFromTree_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SnippetEditDialog { Owner = this };
         if (dialog.ShowDialog() == true && dialog.Result != null)
         {
-            ViewModel.SnippetsSidebar.UpdateSnippet(dialog.Result);
+            ViewModel.SnippetsSidebar.AddSnippet(dialog.Result);
         }
     }
 
-    private void DeleteSnippet_Click(object sender, RoutedEventArgs e)
+    private void AddSnippetFolderFromTree_Click(object sender, RoutedEventArgs e)
     {
-        if (GetSnippetFromMenuItem(sender) is not { } snippet) return;
+        ViewModel.SnippetsSidebar.AddFolderWithInPlaceEdit(null);
+    }
+
+    private void AddSnippetInFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetSnippetTreeItemFromMenuItem(sender) is { IsFolder: true } folder)
+        {
+            var dialog = new SnippetEditDialog { Owner = this };
+            if (dialog.ShowDialog() == true && dialog.Result != null)
+            {
+                ViewModel.SnippetsSidebar.AddSnippet(dialog.Result, folder.Id);
+            }
+        }
+    }
+
+    private void AddSnippetSubfolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetSnippetTreeItemFromMenuItem(sender) is { IsFolder: true } folder)
+        {
+            ViewModel.SnippetsSidebar.AddFolderWithInPlaceEdit(folder.Id);
+        }
+    }
+
+    private void RenameSnippetFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetSnippetTreeItemFromMenuItem(sender) is { IsFolder: true } item)
+        {
+            item.IsEditing = true;
+        }
+    }
+
+    private void EditSnippetTree_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetSnippetTreeItemFromMenuItem(sender) is { IsFolder: false, Snippet: not null } item)
+        {
+            var dialog = new SnippetEditDialog(item.Snippet) { Owner = this };
+            if (dialog.ShowDialog() == true && dialog.Result != null)
+            {
+                dialog.Result.FolderId = item.Snippet.FolderId;
+                ViewModel.SnippetsSidebar.UpdateSnippet(dialog.Result);
+            }
+        }
+    }
+
+    private void DeleteSnippetTree_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetSnippetTreeItemFromMenuItem(sender) is not { } item) return;
 
         var result = MessageBox.Show(
-            $"Delete snippet '{snippet.Name}'?", "Confirm Delete",
+            $"Delete '{item.Name}'?", "Confirm Delete",
             MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (result == MessageBoxResult.Yes)
-            ViewModel.SnippetsSidebar.DeleteSnippet(snippet);
+            ViewModel.SnippetsSidebar.DeleteItem(item);
     }
 
-    private void ExecuteSnippet_Click(object sender, RoutedEventArgs e)
+    private void ExecuteSnippetTree_Click(object sender, RoutedEventArgs e)
     {
-        if (GetSnippetFromMenuItem(sender) is { } snippet)
-            ViewModel.SnippetsSidebar.ExecuteSnippet(snippet);
+        if (GetSnippetTreeItemFromMenuItem(sender) is { IsFolder: false, Snippet: not null } item)
+            ViewModel.SnippetsSidebar.ExecuteSnippet(item.Snippet);
     }
 
-    private void SnippetList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    private void SnippetTree_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        if (sender is System.Windows.Controls.ListBox listBox
-            && listBox.SelectedItem is CommandSnippet snippet)
+        if (SnippetTreeView.SelectedItem is SnippetTreeItem { IsFolder: false, Snippet: not null } item)
         {
-            ViewModel.SnippetsSidebar.ExecuteSnippet(snippet);
+            ViewModel.SnippetsSidebar.ExecuteSnippet(item.Snippet);
         }
     }
 
-    private static CommandSnippet? GetSnippetFromMenuItem(object sender)
+    private void SnippetFolderTextBox_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is TextBox tb)
+        {
+            tb.Focus();
+            tb.SelectAll();
+        }
+    }
+
+    private void SnippetFolderTextBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (sender is TextBox { DataContext: SnippetTreeItem item } && item.IsEditing)
+        {
+            item.IsEditing = false;
+            ViewModel.SnippetsSidebar.CommitFolderRename(item);
+        }
+    }
+
+    private void SnippetFolderTextBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (sender is not TextBox { DataContext: SnippetTreeItem item }) return;
+
+        if (e.Key == Key.Enter)
+        {
+            item.IsEditing = false;
+            ViewModel.SnippetsSidebar.CommitFolderRename(item);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape)
+        {
+            item.IsEditing = false;
+            ViewModel.SnippetsSidebar.CancelFolderRename();
+            e.Handled = true;
+        }
+    }
+
+    private static SnippetTreeItem? GetSnippetTreeItemFromMenuItem(object sender)
     {
         if (sender is MenuItem menuItem
             && menuItem.Parent is ContextMenu contextMenu
             && contextMenu.PlacementTarget is FrameworkElement fe
-            && fe.DataContext is CommandSnippet snippet)
-            return snippet;
+            && fe.DataContext is SnippetTreeItem item)
+            return item;
         return null;
     }
 }

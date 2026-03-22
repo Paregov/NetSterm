@@ -480,11 +480,18 @@
                                     Background="{StaticResource ToolbarBackground}"
                                     BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,0,0,1">
                                 <DockPanel>
-                                    <Button ToolTip="Add Snippet" Click="AddSnippet_Click"
-                                            Style="{StaticResource MahApps.Styles.Button.Chromeless}"
-                                            Padding="4" Margin="2,0" DockPanel.Dock="Right">
-                                        <iconPacks:PackIconMaterial Kind="Plus" Width="14" Height="14"/>
-                                    </Button>
+                                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                                        <Button ToolTip="Add Folder" Click="AddSnippetFolder_Click"
+                                                Style="{StaticResource MahApps.Styles.Button.Chromeless}"
+                                                Padding="4" Margin="2,0">
+                                            <iconPacks:PackIconMaterial Kind="FolderPlus" Width="14" Height="14"/>
+                                        </Button>
+                                        <Button ToolTip="Add Snippet" Click="AddSnippet_Click"
+                                                Style="{StaticResource MahApps.Styles.Button.Chromeless}"
+                                                Padding="4" Margin="2,0">
+                                            <iconPacks:PackIconMaterial Kind="Plus" Width="14" Height="14"/>
+                                        </Button>
+                                    </StackPanel>
                                     <TextBlock Text="Command Snippets"
                                                FontSize="11" VerticalAlignment="Center"
                                                Foreground="#999" Margin="4,0"
@@ -492,53 +499,107 @@
                                 </DockPanel>
                             </Border>
 
-                            <!-- Snippet list -->
-                            <ListBox ItemsSource="{Binding SnippetsSidebar.Snippets}"
-                                     Background="Transparent" BorderThickness="0"
-                                     Padding="4"
-                                     MouseDoubleClick="SnippetList_MouseDoubleClick">
-                                <ListBox.ItemContainerStyle>
-                                    <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
-                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                        <Setter Property="Padding" Value="4,2"/>
-                                    </Style>
-                                </ListBox.ItemContainerStyle>
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Margin="2">
+                            <!-- Snippet tree -->
+                            <TreeView x:Name="SnippetTreeView"
+                                      ItemsSource="{Binding SnippetsSidebar.SnippetTree}"
+                                      Background="Transparent" BorderThickness="0"
+                                      Padding="4"
+                                      MouseDoubleClick="SnippetTree_MouseDoubleClick">
+                                <TreeView.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="New Snippet" Click="AddSnippetFromTree_Click">
+                                            <MenuItem.Icon>
+                                                <iconPacks:PackIconMaterial Kind="Plus" Width="14" Height="14"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="New Folder" Click="AddSnippetFolderFromTree_Click">
+                                            <MenuItem.Icon>
+                                                <iconPacks:PackIconMaterial Kind="FolderPlus" Width="14" Height="14"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                    </ContextMenu>
+                                </TreeView.ContextMenu>
+                                <TreeView.Resources>
+                                    <HierarchicalDataTemplate DataType="{x:Type vm:SnippetTreeItem}"
+                                                               ItemsSource="{Binding Children}">
+                                        <StackPanel Orientation="Horizontal" Margin="2">
                                             <StackPanel.ContextMenu>
                                                 <ContextMenu>
-                                                    <MenuItem Header="Execute" Click="ExecuteSnippet_Click">
+                                                    <!-- Snippet-only: Execute -->
+                                                    <MenuItem Header="Execute" Click="ExecuteSnippetTree_Click"
+                                                              Visibility="{Binding IsFolder, Converter={StaticResource InverseBoolToVis}}">
                                                         <MenuItem.Icon>
                                                             <iconPacks:PackIconMaterial Kind="Play" Width="14" Height="14"/>
                                                         </MenuItem.Icon>
                                                     </MenuItem>
-                                                    <MenuItem Header="Edit" Click="EditSnippet_Click">
+                                                    <!-- Folder-only: New Snippet Here -->
+                                                    <MenuItem Header="New Snippet Here" Click="AddSnippetInFolder_Click"
+                                                              Visibility="{Binding IsFolder, Converter={StaticResource BoolToVis}}">
+                                                        <MenuItem.Icon>
+                                                            <iconPacks:PackIconMaterial Kind="Plus" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <!-- Folder-only: New Subfolder -->
+                                                    <MenuItem Header="New Subfolder" Click="AddSnippetSubfolder_Click"
+                                                              Visibility="{Binding IsFolder, Converter={StaticResource BoolToVis}}">
+                                                        <MenuItem.Icon>
+                                                            <iconPacks:PackIconMaterial Kind="FolderPlus" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <Separator/>
+                                                    <!-- Folder-only: Rename -->
+                                                    <MenuItem Header="Rename" Click="RenameSnippetFolder_Click"
+                                                              Visibility="{Binding IsFolder, Converter={StaticResource BoolToVis}}">
+                                                        <MenuItem.Icon>
+                                                            <iconPacks:PackIconMaterial Kind="Pencil" Width="14" Height="14"/>
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <!-- Snippet-only: Edit -->
+                                                    <MenuItem Header="Edit" Click="EditSnippetTree_Click"
+                                                              Visibility="{Binding IsFolder, Converter={StaticResource InverseBoolToVis}}">
                                                         <MenuItem.Icon>
                                                             <iconPacks:PackIconMaterial Kind="Pencil" Width="14" Height="14"/>
                                                         </MenuItem.Icon>
                                                     </MenuItem>
                                                     <Separator/>
-                                                    <MenuItem Header="Delete" Click="DeleteSnippet_Click">
+                                                    <!-- Both: Delete -->
+                                                    <MenuItem Header="Delete" Click="DeleteSnippetTree_Click">
                                                         <MenuItem.Icon>
                                                             <iconPacks:PackIconMaterial Kind="Delete" Width="14" Height="14"/>
                                                         </MenuItem.Icon>
                                                     </MenuItem>
                                                 </ContextMenu>
                                             </StackPanel.ContextMenu>
-                                            <!-- Snippet name -->
-                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                            <!-- Command preview (truncated) -->
-                                            <TextBlock Text="{Binding Command}" Foreground="#999" FontSize="11"
-                                                       TextTrimming="CharacterEllipsis" FontFamily="Consolas"/>
-                                            <!-- Description if present -->
-                                            <TextBlock Text="{Binding Description}" Foreground="#666" FontSize="10"
-                                                       Visibility="{Binding Description, Converter={StaticResource NullToCollapsed}}"
-                                                       TextTrimming="CharacterEllipsis"/>
+                                            <!-- Folder icon -->
+                                            <iconPacks:PackIconMaterial Kind="Folder" Width="14" Height="14"
+                                                                        Foreground="#dca756"
+                                                                        Visibility="{Binding IsFolder, Converter={StaticResource BoolToVis}}"
+                                                                        Margin="0,0,6,0"/>
+                                            <!-- Snippet icon -->
+                                            <iconPacks:PackIconMaterial Kind="CodeBraces" Width="14" Height="14"
+                                                                        Foreground="{StaticResource AccentBlueBrush}"
+                                                                        Visibility="{Binding IsFolder, Converter={StaticResource InverseBoolToVis}}"
+                                                                        Margin="0,0,6,0"/>
+                                            <!-- Normal mode: display name -->
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                                       Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolToVis}}"/>
+                                            <!-- Edit mode: editable name -->
+                                            <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                                     Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"
+                                                     MinWidth="100" VerticalAlignment="Center"
+                                                     LostFocus="SnippetFolderTextBox_LostFocus"
+                                                     PreviewKeyDown="SnippetFolderTextBox_KeyDown"
+                                                     Loaded="SnippetFolderTextBox_Loaded"/>
                                         </StackPanel>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
+                                    </HierarchicalDataTemplate>
+                                </TreeView.Resources>
+                                <TreeView.ItemContainerStyle>
+                                    <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
+                                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                                        <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
+                                    </Style>
+                                </TreeView.ItemContainerStyle>
+                            </TreeView>
                         </DockPanel>
                     </Grid>
                 </DockPanel>
