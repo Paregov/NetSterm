@@ -93,6 +93,16 @@
         <Style Selector="ListBox.tabStrip ListBoxItem:selected /template/ ContentPresenter">
             <Setter Property="Background" Value="#1e1e1e"/>
         </Style>
+
+        <!-- Drag-and-drop visual indicators -->
+        <Style Selector="TreeViewItem.drag-over-folder">
+            <Setter Property="Background" Value="#3000A0FF"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+        <Style Selector="TreeViewItem.drag-over-sibling">
+            <Setter Property="BorderBrush" Value="#5000A0FF"/>
+            <Setter Property="BorderThickness" Value="0,0,0,2"/>
+        </Style>
     </Window.Styles>
 
     <DockPanel LastChildFill="True">
@@ -295,7 +305,8 @@
                                       KeyDown="SessionTreeView_KeyDown"
                                       DragDrop.AllowDrop="True"
                                       DragDrop.DragOver="SessionTree_DragOver"
-                                      DragDrop.Drop="SessionTree_Drop">
+                                      DragDrop.Drop="SessionTree_Drop"
+                                      DragDrop.DragLeave="SessionTree_DragLeave">
                                 <TreeView.ContextMenu>
                                     <ContextMenu>
                                         <MenuItem Header="New Connection" Click="NewConnectionFromTree_Click">
@@ -540,7 +551,8 @@
                                       KeyDown="SnippetTreeView_KeyDown"
                                       DragDrop.AllowDrop="True"
                                       DragDrop.DragOver="SnippetTree_DragOver"
-                                      DragDrop.Drop="SnippetTree_Drop">
+                                      DragDrop.Drop="SnippetTree_Drop"
+                                      DragDrop.DragLeave="SnippetTree_DragLeave">
                                 <TreeView.ContextMenu>
                                     <ContextMenu>
                                         <MenuItem Header="New Snippet" Click="AddSnippetFromTree_Click">

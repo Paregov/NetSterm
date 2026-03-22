@@ -20,6 +20,9 @@ public partial class SnippetsSidebarViewModel : ObservableObject
 
     public void LoadTree()
     {
+        var expandedIds = new HashSet<string>();
+        CollectExpandedIds(SnippetTree, expandedIds);
+
         SnippetTree.Clear();
         var store = _storage.Store;
 
@@ -67,6 +70,29 @@ public partial class SnippetsSidebarViewModel : ObservableObject
 
         foreach (var item in rootItems)
             SnippetTree.Add(item);
+
+        RestoreExpandedIds(SnippetTree, expandedIds);
+    }
+
+    private static void CollectExpandedIds(IEnumerable<SnippetTreeItem> items, HashSet<string> ids)
+    {
+        foreach (var item in items)
+        {
+            if (item.IsFolder && item.IsExpanded)
+                ids.Add(item.Id);
+            CollectExpandedIds(item.Children, ids);
+        }
+    }
+
+    private static void RestoreExpandedIds(IEnumerable<SnippetTreeItem> items, HashSet<string> ids)
+    {
+        if (ids.Count == 0) return;
+        foreach (var item in items)
+        {
+            if (item.IsFolder)
+                item.IsExpanded = ids.Contains(item.Id);
+            RestoreExpandedIds(item.Children, ids);
+        }
     }
 
     public void AddSnippet(CommandSnippet snippet, string? folderId = null)

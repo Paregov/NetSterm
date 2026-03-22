@@ -151,6 +151,9 @@ public partial class MainViewModel : ObservableObject
 
     public void LoadSessionTree()
     {
+        var expandedIds = new HashSet<string>();
+        CollectExpandedIds(SessionTree, expandedIds);
+
         SessionTree.Clear();
         var store = _storage.Store;
 
@@ -198,6 +201,29 @@ public partial class MainViewModel : ObservableObject
 
         foreach (var item in rootItems)
             SessionTree.Add(item);
+
+        RestoreExpandedIds(SessionTree, expandedIds);
+    }
+
+    private static void CollectExpandedIds(IEnumerable<SessionTreeItem> items, HashSet<string> ids)
+    {
+        foreach (var item in items)
+        {
+            if (item.IsFolder && item.IsExpanded)
+                ids.Add(item.Id);
+            CollectExpandedIds(item.Children, ids);
+        }
+    }
+
+    private static void RestoreExpandedIds(IEnumerable<SessionTreeItem> items, HashSet<string> ids)
+    {
+        if (ids.Count == 0) return;
+        foreach (var item in items)
+        {
+            if (item.IsFolder)
+                item.IsExpanded = ids.Contains(item.Id);
+            RestoreExpandedIds(item.Children, ids);
+        }
     }
 
     [RelayCommand]

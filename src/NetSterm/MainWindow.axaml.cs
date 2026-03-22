@@ -21,6 +21,8 @@ public partial class MainWindow : Window
 {
     private readonly MainViewModel _viewModel;
     private MainViewModel ViewModel => _viewModel;
+    private TreeViewItem? _currentSessionDragOverItem;
+    private TreeViewItem? _currentSnippetDragOverItem;
 
     public MainWindow()
     {
@@ -228,6 +230,7 @@ public partial class MainWindow : Window
             if (ViewModel.CommitRename(item))
             {
                 item.IsEditing = false;
+                FocusTreeViewItem(SessionTreeView, item);
             }
             else
             {
@@ -243,8 +246,11 @@ public partial class MainWindow : Window
         }
         else if (e.Key == Key.Escape)
         {
+            var id = item.Id;
+            var isFolder = item.IsFolder;
             item.IsEditing = false;
             ViewModel.CancelFolderRename(item);
+            FocusTreeViewItemById(SessionTreeView, id, isFolder);
             e.Handled = true;
         }
     }
@@ -706,19 +712,39 @@ public partial class MainWindow : Window
 
     private void SessionTree_DragOver(object? sender, DragEventArgs e)
     {
+        ClearDragOverHighlight(ref _currentSessionDragOverItem);
+
         if (!e.Data.Contains("SessionTreeItem"))
         {
             e.DragEffects = DragDropEffects.None;
+            e.Handled = true;
+            return;
         }
-        else
+
+        e.DragEffects = DragDropEffects.Move;
+
+        var targetItem = FindTargetTreeItem<SessionTreeItem>(e);
+        if (targetItem != null)
         {
-            e.DragEffects = DragDropEffects.Move;
+            var tvi = FindTreeViewItemForDataContext(SessionTreeView, targetItem);
+            if (tvi != null)
+            {
+                _currentSessionDragOverItem = tvi;
+                tvi.Classes.Add(targetItem.IsFolder ? "drag-over-folder" : "drag-over-sibling");
+            }
         }
+
         e.Handled = true;
+    }
+
+    private void SessionTree_DragLeave(object? sender, DragEventArgs e)
+    {
+        ClearDragOverHighlight(ref _currentSessionDragOverItem);
     }
 
     private void SessionTree_Drop(object? sender, DragEventArgs e)
     {
+        ClearDragOverHighlight(ref _currentSessionDragOverItem);
         if (!e.Data.Contains("SessionTreeItem")) return;
         var draggedItem = e.Data.Get("SessionTreeItem") as SessionTreeItem;
         if (draggedItem == null) return;
@@ -755,19 +781,39 @@ public partial class MainWindow : Window
 
     private void SnippetTree_DragOver(object? sender, DragEventArgs e)
     {
+        ClearDragOverHighlight(ref _currentSnippetDragOverItem);
+
         if (!e.Data.Contains("SnippetTreeItem"))
         {
             e.DragEffects = DragDropEffects.None;
+            e.Handled = true;
+            return;
         }
-        else
+
+        e.DragEffects = DragDropEffects.Move;
+
+        var targetItem = FindTargetTreeItem<SnippetTreeItem>(e);
+        if (targetItem != null)
         {
-            e.DragEffects = DragDropEffects.Move;
+            var tvi = FindTreeViewItemForDataContext(SnippetTreeView, targetItem);
+            if (tvi != null)
+            {
+                _currentSnippetDragOverItem = tvi;
+                tvi.Classes.Add(targetItem.IsFolder ? "drag-over-folder" : "drag-over-sibling");
+            }
         }
+
         e.Handled = true;
+    }
+
+    private void SnippetTree_DragLeave(object? sender, DragEventArgs e)
+    {
+        ClearDragOverHighlight(ref _currentSnippetDragOverItem);
     }
 
     private void SnippetTree_Drop(object? sender, DragEventArgs e)
     {
+        ClearDragOverHighlight(ref _currentSnippetDragOverItem);
         if (!e.Data.Contains("SnippetTreeItem")) return;
         var draggedItem = e.Data.Get("SnippetTreeItem") as SnippetTreeItem;
         if (draggedItem == null) return;
@@ -792,6 +838,26 @@ public partial class MainWindow : Window
 #pragma warning restore CS0618
 
     // ===== Drag-and-Drop Helpers =====
+
+    private static void ClearDragOverHighlight(ref TreeViewItem? item)
+    {
+        if (item != null)
+        {
+            item.Classes.Remove("drag-over-folder");
+            item.Classes.Remove("drag-over-sibling");
+            item = null;
+        }
+    }
+
+    private static TreeViewItem? FindTreeViewItemForDataContext(TreeView treeView, object dataContext)
+    {
+        foreach (var desc in treeView.GetVisualDescendants())
+        {
+            if (desc is TreeViewItem tvi && tvi.DataContext == dataContext)
+                return tvi;
+        }
+        return null;
+    }
 
     private static T? FindTargetTreeItem<T>(DragEventArgs e) where T : class
     {
@@ -1013,6 +1079,7 @@ public partial class MainWindow : Window
             if (ViewModel.SnippetsSidebar.CommitRename(item))
             {
                 item.IsEditing = false;
+                FocusTreeViewItem(SnippetTreeView, item);
             }
             else
             {
@@ -1028,8 +1095,11 @@ public partial class MainWindow : Window
         }
         else if (e.Key == Key.Escape)
         {
+            var id = item.Id;
+            var isFolder = item.IsFolder;
             item.IsEditing = false;
             ViewModel.SnippetsSidebar.CancelFolderRename();
+            FocusTreeViewItemById(SnippetTreeView, id, isFolder);
             e.Handled = true;
         }
     }
@@ -1064,6 +1134,45 @@ public partial class MainWindow : Window
                     tb.Focus();
                     tb.SelectAll();
                     return;
+                }
+            }
+        }, DispatcherPriority.Background);
+    }
+
+    private static void FocusTreeViewItem(TreeView treeView, object dataContext)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            foreach (var descendant in treeView.GetVisualDescendants())
+            {
+                if (descendant is TreeViewItem tvi && tvi.DataContext == dataContext)
+                {
+                    tvi.Focus();
+                    return;
+                }
+            }
+        }, DispatcherPriority.Background);
+    }
+
+    private static void FocusTreeViewItemById(TreeView treeView, string id, bool isFolder)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            foreach (var descendant in treeView.GetVisualDescendants())
+            {
+                if (descendant is TreeViewItem tvi)
+                {
+                    bool match = tvi.DataContext switch
+                    {
+                        SessionTreeItem s => s.Id == id && s.IsFolder == isFolder,
+                        SnippetTreeItem s => s.Id == id && s.IsFolder == isFolder,
+                        _ => false
+                    };
+                    if (match)
+                    {
+                        tvi.Focus();
+                        return;
+                    }
                 }
             }
         }, DispatcherPriority.Background);
