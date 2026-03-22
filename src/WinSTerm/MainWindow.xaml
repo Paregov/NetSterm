@@ -105,11 +105,12 @@
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
-            <MenuItem Header="_Sessions">
-                <MenuItem Header="_Quick Connect" Command="{Binding QuickConnectCommand}"/>
-            </MenuItem>
             <MenuItem Header="_Help">
-                <MenuItem Header="_About WinSTerm"/>
+                <MenuItem Header="_About WinSTerm" Click="About_Click">
+                    <MenuItem.Icon>
+                        <iconPacks:PackIconMaterial Kind="InformationOutline" Width="14" Height="14"/>
+                    </MenuItem.Icon>
+                </MenuItem>
             </MenuItem>
         </Menu>
 

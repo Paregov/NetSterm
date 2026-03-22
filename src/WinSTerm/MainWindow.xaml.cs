@@ -327,6 +327,12 @@ public partial class MainWindow : MetroWindow
         dialog.ShowDialog();
     }
 
+    private void About_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new AboutDialog { Owner = this };
+        dialog.ShowDialog();
+    }
+
     private void ExportConfig_Click(object sender, RoutedEventArgs e)
     {
         var exportDialog = new ExportDialog { Owner = this };
