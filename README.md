@@ -25,24 +25,26 @@ A modern cross-platform SSH terminal application inspired by MobaXterm, built wi
 | MVVM | [CommunityToolkit.Mvvm](https://learn.microsoft.com/en-us/dotnet/communitytoolkit/mvvm/) |
 | Icons | [Material.Icons.Avalonia](https://github.com/SKProCH/Material.Icons) |
 
-## Building
+## Getting Started
+
+### Prerequisites
+
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) (preview)
+- No platform-specific runtime dependencies
+
+### Build
 
 ```bash
 dotnet build src/NetSterm/NetSterm.csproj
 ```
 
-## Running
+### Run
 
 ```bash
 dotnet run --project src/NetSterm/NetSterm.csproj
 ```
 
-## Requirements
-
-- .NET 10 SDK
-- No platform-specific runtime dependencies
-
-## Installer (Windows)
+### Installer (Windows)
 
 A Windows installer can be built with [Inno Setup](https://jrsoftware.org/isinfo.php):
 
@@ -52,6 +54,14 @@ A Windows installer can be built with [Inno Setup](https://jrsoftware.org/isinfo
 
 This creates either an Inno Setup installer or a portable ZIP archive.
 
+## Contributing
+
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## Security
+
+For reporting vulnerabilities, see [SECURITY.md](SECURITY.md).
+
 ## License
 
-See [LICENSE](LICENSE) for details.
+MIT — see [LICENSE](LICENSE) for details.
