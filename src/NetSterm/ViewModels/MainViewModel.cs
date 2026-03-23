@@ -176,8 +176,8 @@ public partial class MainViewModel : ObservableObject
         // Nest folders
         foreach (var folder in store.Folders.OrderBy(f => f.SortOrder))
         {
-            if (folder.ParentFolderId != null && folderMap.ContainsKey(folder.ParentFolderId))
-                folderMap[folder.ParentFolderId].Children.Add(folderMap[folder.Id]);
+            if (folder.ParentFolderId != null && folderMap.TryGetValue(folder.ParentFolderId, out var parentItem))
+                parentItem.Children.Add(folderMap[folder.Id]);
             else
                 rootItems.Add(folderMap[folder.Id]);
         }
@@ -193,8 +193,8 @@ public partial class MainViewModel : ObservableObject
                 ConnectionInfo = conn
             };
 
-            if (conn.FolderId != null && folderMap.ContainsKey(conn.FolderId))
-                folderMap[conn.FolderId].Children.Add(item);
+            if (conn.FolderId != null && folderMap.TryGetValue(conn.FolderId, out var folderItem))
+                folderItem.Children.Add(item);
             else
                 rootItems.Add(item);
         }

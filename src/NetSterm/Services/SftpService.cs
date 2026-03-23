@@ -1,3 +1,4 @@
+using System.Globalization;
 using Renci.SshNet;
 using Serilog;
 using NetSterm.Models;
@@ -49,7 +50,7 @@ public class SftpService : ISftpService
                     Permissions = entry.Attributes != null
                         ? FormatPermissions(entry.IsDirectory, entry.Attributes)
                         : "",
-                    Owner = entry.UserId.ToString()
+                    Owner = entry.UserId.ToString(CultureInfo.InvariantCulture)
                 });
             }
 

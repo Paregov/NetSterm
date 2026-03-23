@@ -104,15 +104,19 @@ public partial class SettingsDialogViewModel : ObservableObject
     }
 
     [RelayCommand]
+#pragma warning disable CA1822 // Method is bound via [RelayCommand] and must remain instance
     private void Cancel(Window window)
     {
         window.Close();
     }
+#pragma warning restore CA1822
 
     [RelayCommand]
+#pragma warning disable CA1822 // Method is bound via [RelayCommand] and must remain instance
     private void BrowseLocalDirectory()
     {
         // TODO: Avalonia migration - Use Avalonia folder picker (StorageProvider API)
         // var dialog = new OpenFolderDialog { ... };
     }
+#pragma warning restore CA1822
 }

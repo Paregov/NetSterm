@@ -1,0 +1,40 @@
+# Auto-detect text files and normalize line endings
+* text=auto
+
+# C# source files
+*.cs text diff=csharp
+
+# XAML / Avalonia markup
+*.axaml text
+*.xaml text
+
+# XML and project files
+*.xml text
+*.props text
+*.targets text
+*.csproj text
+*.slnx text
+*.sln text
+
+# Data / config
+*.json text
+*.yml text
+*.yaml text
+
+# Documentation
+*.md text
+
+# Scripts
+*.ps1 text
+*.sh text eol=lf
+
+# Binary assets
+*.ico binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+
+# Compiled binaries
+*.exe binary
+*.dll binary

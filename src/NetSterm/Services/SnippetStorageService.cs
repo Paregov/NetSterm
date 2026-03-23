@@ -42,7 +42,7 @@ public sealed class SnippetStorageService
 
     public void AddSnippet(CommandSnippet snippet)
     {
-        if (snippet == null) throw new ArgumentNullException(nameof(snippet));
+        ArgumentNullException.ThrowIfNull(snippet);
 
         lock (_lock)
         {
@@ -53,7 +53,7 @@ public sealed class SnippetStorageService
 
     public void UpdateSnippet(CommandSnippet snippet)
     {
-        if (snippet == null) throw new ArgumentNullException(nameof(snippet));
+        ArgumentNullException.ThrowIfNull(snippet);
 
         lock (_lock)
         {
@@ -77,7 +77,7 @@ public sealed class SnippetStorageService
 
     public void AddFolder(SnippetFolder folder)
     {
-        if (folder == null) throw new ArgumentNullException(nameof(folder));
+        ArgumentNullException.ThrowIfNull(folder);
 
         lock (_lock)
         {

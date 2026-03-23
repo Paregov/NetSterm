@@ -56,7 +56,7 @@ public sealed class SettingsService
 
     public void Apply(AppSettings settings)
     {
-        if (settings == null) throw new ArgumentNullException(nameof(settings));
+        ArgumentNullException.ThrowIfNull(settings);
 
         lock (_lock)
         {

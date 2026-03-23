@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using Avalonia;
 using Avalonia.WebView.Desktop;
@@ -6,7 +7,7 @@ using Serilog;
 
 namespace NetSterm;
 
-class Program
+sealed class Program
 {
     [STAThread]
     public static void Main(string[] args)
@@ -17,11 +18,12 @@ class Program
 
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
-            .WriteTo.Debug()
+            .WriteTo.Debug(formatProvider: CultureInfo.InvariantCulture)
             .WriteTo.File(logPath,
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 7,
-                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
+                formatProvider: CultureInfo.InvariantCulture)
             .CreateLogger();
 
         Log.Information("NetSterm starting up");

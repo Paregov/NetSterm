@@ -1,0 +1,38 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+        dotnet-quality: 'preview'
+
+    - name: Restore dependencies
+      run: dotnet restore src/NetSterm/NetSterm.csproj
+
+    - name: Build
+      run: dotnet build src/NetSterm/NetSterm.csproj --no-restore --configuration Release
+
+    - name: Publish
+      run: dotnet publish src/NetSterm/NetSterm.csproj --no-build --configuration Release --output ./publish
+
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: netsterm-${{ matrix.os }}
+        path: ./publish/

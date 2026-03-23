@@ -19,6 +19,7 @@ namespace NetSterm;
 
 public partial class MainWindow : Window
 {
+    private static readonly string[] s_zipFilePatterns = ["*.zip"];
     private readonly MainViewModel _viewModel;
     private MainViewModel ViewModel => _viewModel;
     private TreeViewItem? _currentSessionDragOverItem;
@@ -439,7 +440,7 @@ public partial class MainWindow : Window
             SuggestedFileName = $"NetSterm-export-{DateTime.Now:yyyyMMdd}",
             FileTypeChoices = new[]
             {
-                new FilePickerFileType("NetSterm Package") { Patterns = new[] { "*.zip" } }
+                new FilePickerFileType("NetSterm Package") { Patterns = s_zipFilePatterns }
             }
         });
 
@@ -470,7 +471,7 @@ public partial class MainWindow : Window
             AllowMultiple = false,
             FileTypeFilter = new[]
             {
-                new FilePickerFileType("NetSterm Package") { Patterns = new[] { "*.zip" } }
+                new FilePickerFileType("NetSterm Package") { Patterns = s_zipFilePatterns }
             }
         });
 

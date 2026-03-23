@@ -159,11 +159,13 @@ public partial class ConnectionDialogViewModel : ObservableValidator
     }
 
     [RelayCommand]
+#pragma warning disable CA1822 // Method is bound via [RelayCommand] and must remain instance
     private void BrowseKey()
     {
         // TODO: Avalonia migration - Use Avalonia file picker (StorageProvider API)
         // var dialog = new OpenFileDialog { ... };
     }
+#pragma warning restore CA1822
 
     private bool CanSave()
     {
@@ -218,10 +220,12 @@ public partial class ConnectionDialogViewModel : ObservableValidator
     }
 
     [RelayCommand]
+#pragma warning disable CA1822 // Method is bound via [RelayCommand] and must remain instance
     private void Cancel(Window window)
     {
         window.Close();
     }
+#pragma warning restore CA1822
 
     private static string? NullIfEmpty(string? value)
     {

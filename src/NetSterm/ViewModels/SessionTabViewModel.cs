@@ -122,5 +122,6 @@ public partial class SessionTabViewModel : ObservableObject, IDisposable
         SshService.CurrentDirectoryChanged -= OnCurrentDirectoryChanged;
         SshService.Dispose();
         SftpService.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

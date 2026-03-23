@@ -205,7 +205,7 @@ public class SshConnectionService : ISshConnectionService
             {
                 while (!ct.IsCancellationRequested && _shellStream != null)
                 {
-                    var count = await _shellStream.ReadAsync(buffer, 0, buffer.Length, ct);
+                    var count = await _shellStream.ReadAsync(buffer.AsMemory(), ct);
                     if (count > 0)
                     {
                         var text = System.Text.Encoding.UTF8.GetString(buffer, 0, count);
