@@ -26,7 +26,8 @@ public static class EncryptionService
 
     public static string Encrypt(string plainText)
     {
-        if (string.IsNullOrEmpty(plainText)) return string.Empty;
+        if (string.IsNullOrEmpty(plainText))
+            return string.Empty;
 
         using var aes = Aes.Create();
         aes.Key = DeriveKey();
@@ -46,7 +47,8 @@ public static class EncryptionService
 
     public static string Decrypt(string cipherText)
     {
-        if (string.IsNullOrEmpty(cipherText)) return string.Empty;
+        if (string.IsNullOrEmpty(cipherText))
+            return string.Empty;
 
         try
         {

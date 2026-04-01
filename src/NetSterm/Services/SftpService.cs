@@ -1,7 +1,7 @@
 using System.Globalization;
+using NetSterm.Models;
 using Renci.SshNet;
 using Serilog;
-using NetSterm.Models;
 
 namespace NetSterm.Services;
 

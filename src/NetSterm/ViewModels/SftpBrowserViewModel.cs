@@ -39,6 +39,21 @@ public partial class SftpBrowserViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<TransferItem> _transfers = [];
 
+    public bool HasCompletedTransfers => Transfers.Any(t => t.Status != TransferStatus.InProgress);
+
+    public SftpBrowserViewModel()
+    {
+        Transfers.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasCompletedTransfers));
+    }
+
+    [RelayCommand]
+    private void ClearCompletedTransfers()
+    {
+        var completed = Transfers.Where(t => t.Status != TransferStatus.InProgress).ToList();
+        foreach (var item in completed)
+            Transfers.Remove(item);
+    }
+
     // Selected items set from code-behind
     public IList<SftpFileItem> SelectedLocalFiles { get; set; } = new List<SftpFileItem>();
     public IList<SftpFileItem> SelectedRemoteFiles { get; set; } = new List<SftpFileItem>();
@@ -69,10 +84,12 @@ public partial class SftpBrowserViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(IsConnected))]
     private async Task Upload()
     {
-        if (_sftpService is null) return;
+        if (_sftpService is null)
+            return;
 
         var files = SelectedLocalFiles.Where(f => !f.IsDirectory).ToList();
-        if (files.Count == 0) return;
+        if (files.Count == 0)
+            return;
 
         foreach (var file in files)
         {
@@ -95,10 +112,12 @@ public partial class SftpBrowserViewModel : ObservableObject
                     bytes => transfer.TransferredBytes = bytes,
                     CancellationToken.None);
                 transfer.Status = TransferStatus.Completed;
+                OnPropertyChanged(nameof(HasCompletedTransfers));
             }
             catch
             {
                 transfer.Status = TransferStatus.Failed;
+                OnPropertyChanged(nameof(HasCompletedTransfers));
             }
         }
 
@@ -108,10 +127,12 @@ public partial class SftpBrowserViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(IsConnected))]
     private async Task Download()
     {
-        if (_sftpService is null) return;
+        if (_sftpService is null)
+            return;
 
         var files = SelectedRemoteFiles.Where(f => !f.IsDirectory).ToList();
-        if (files.Count == 0) return;
+        if (files.Count == 0)
+            return;
 
         foreach (var file in files)
         {
@@ -134,10 +155,12 @@ public partial class SftpBrowserViewModel : ObservableObject
                     bytes => transfer.TransferredBytes = bytes,
                     CancellationToken.None);
                 transfer.Status = TransferStatus.Completed;
+                OnPropertyChanged(nameof(HasCompletedTransfers));
             }
             catch
             {
                 transfer.Status = TransferStatus.Failed;
+                OnPropertyChanged(nameof(HasCompletedTransfers));
             }
         }
 
@@ -147,7 +170,8 @@ public partial class SftpBrowserViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(IsConnected))]
     private async Task DeleteRemote(SftpFileItem? item)
     {
-        if (_sftpService is null || item is null) return;
+        if (_sftpService is null || item is null)
+            return;
 
         await _sftpService.DeleteAsync(item.FullPath);
         await LoadRemoteFilesAsync();
@@ -156,7 +180,8 @@ public partial class SftpBrowserViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(IsConnected))]
     private async Task CreateRemoteFolder(string? folderName)
     {
-        if (_sftpService is null || string.IsNullOrWhiteSpace(folderName)) return;
+        if (_sftpService is null || string.IsNullOrWhiteSpace(folderName))
+            return;
 
         var fullPath = RemotePath.TrimEnd('/') + "/" + folderName;
         await _sftpService.CreateDirectoryAsync(fullPath);
@@ -178,7 +203,8 @@ public partial class SftpBrowserViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(IsConnected))]
     private async Task NavigateRemoteUp()
     {
-        if (RemotePath is "/" or "") return;
+        if (RemotePath is "/" or "")
+            return;
 
         var parent = RemotePath.TrimEnd('/');
         var idx = parent.LastIndexOf('/');
@@ -190,7 +216,8 @@ public partial class SftpBrowserViewModel : ObservableObject
     private async Task NavigateLocalUp()
     {
         var parent = Directory.GetParent(LocalPath);
-        if (parent is null) return;
+        if (parent is null)
+            return;
 
         LocalPath = parent.FullName;
         await LoadLocalFilesAsync();
@@ -198,7 +225,8 @@ public partial class SftpBrowserViewModel : ObservableObject
 
     private async Task LoadRemoteFilesAsync()
     {
-        if (_sftpService is null || !IsConnected) return;
+        if (_sftpService is null || !IsConnected)
+            return;
 
         IsBusy = true;
         try
@@ -223,7 +251,8 @@ public partial class SftpBrowserViewModel : ObservableObject
         {
             var items = new List<SftpFileItem>();
 
-            if (!Directory.Exists(LocalPath)) return Task.CompletedTask;
+            if (!Directory.Exists(LocalPath))
+                return Task.CompletedTask;
 
             var dirInfo = new DirectoryInfo(LocalPath);
 

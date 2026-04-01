@@ -9,11 +9,11 @@ using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Serilog;
 using NetSterm.Models;
 using NetSterm.Services;
 using NetSterm.ViewModels;
 using NetSterm.Views;
+using Serilog;
 
 namespace NetSterm;
 
@@ -24,6 +24,11 @@ public partial class MainWindow : Window
     private MainViewModel ViewModel => _viewModel;
     private TreeViewItem? _currentSessionDragOverItem;
     private TreeViewItem? _currentSnippetDragOverItem;
+
+    // SFTP drag-to-Explorer state
+    private Point _sftpDragStart;
+    private bool _sftpDragPending;
+    private SftpTreeNode? _sftpDragNode;
 
     public MainWindow()
     {
@@ -92,7 +97,8 @@ public partial class MainWindow : Window
 
     private async void SessionTreeView_KeyDown(object? sender, KeyEventArgs e)
     {
-        if (SessionTreeView.SelectedItem is not SessionTreeItem item) return;
+        if (SessionTreeView.SelectedItem is not SessionTreeItem item)
+            return;
 
         if (e.Key == Key.F2)
         {
@@ -224,7 +230,8 @@ public partial class MainWindow : Window
 
     private void TreeItemTextBox_KeyDown(object? sender, KeyEventArgs e)
     {
-        if (sender is not TextBox { DataContext: SessionTreeItem item } tb) return;
+        if (sender is not TextBox { DataContext: SessionTreeItem item } tb)
+            return;
 
         if (e.Key == Key.Enter)
         {
@@ -264,13 +271,21 @@ public partial class MainWindow : Window
         await ViewModel.OpenSession(info);
 
         var tab = ViewModel.SelectedTab;
-        if (tab == null || tab.IsConnected) return;
+        if (tab == null)
+            return;
+
+        // Subscribe to close request from disconnect overlay
+        tab.CloseRequested += () => ViewModel.CloseTabCommand.Execute(tab);
+
+        if (tab.IsConnected)
+            return;
 
         string? password = null;
 
         if (info.AuthMethod == AuthMethod.Password && !string.IsNullOrEmpty(info.EncryptedPassword))
         {
-            try { password = ConnectionStorageService.DecryptPassword(info.EncryptedPassword); }
+            try
+            { password = ConnectionStorageService.DecryptPassword(info.EncryptedPassword); }
             catch (Exception ex)
             {
                 Log.Warning(ex, "Failed to decrypt password for {Host}", info.Host);
@@ -305,7 +320,8 @@ public partial class MainWindow : Window
 
     private async void QuickConnect_Click(object? sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(ViewModel.QuickHost)) return;
+        if (string.IsNullOrWhiteSpace(ViewModel.QuickHost))
+            return;
 
         var info = new ConnectionInfo
         {
@@ -375,8 +391,10 @@ public partial class MainWindow : Window
 
     private async void TabReconnect_Click(object? sender, RoutedEventArgs e)
     {
-        if (sender is not MenuItem { DataContext: SessionTabViewModel tab }) return;
-        if (tab.IsConnected) return;
+        if (sender is not MenuItem { DataContext: SessionTabViewModel tab })
+            return;
+        if (tab.IsConnected)
+            return;
 
         try
         {
@@ -385,7 +403,8 @@ public partial class MainWindow : Window
 
             if (info.AuthMethod == AuthMethod.Password && !string.IsNullOrEmpty(info.EncryptedPassword))
             {
-                try { password = ConnectionStorageService.DecryptPassword(info.EncryptedPassword); }
+                try
+                { password = ConnectionStorageService.DecryptPassword(info.EncryptedPassword); }
                 catch (Exception decryptEx)
                 {
                     Log.Warning(decryptEx, "Failed to decrypt password for reconnect to {Host}", info.Host);
@@ -444,7 +463,8 @@ public partial class MainWindow : Window
             }
         });
 
-        if (file == null) return;
+        if (file == null)
+            return;
 
         try
         {
@@ -475,7 +495,8 @@ public partial class MainWindow : Window
             }
         });
 
-        if (files.Count == 0) return;
+        if (files.Count == 0)
+            return;
 
         try
         {
@@ -519,6 +540,24 @@ public partial class MainWindow : Window
         {
             Settings_Click(this, new RoutedEventArgs());
             e.Handled = true;
+            return;
+        }
+
+        // Handle R/C shortcuts when disconnect overlay is visible
+        if (ViewModel.SelectedTab is { IsDisconnected: true } tab && e.KeyModifiers == KeyModifiers.None)
+        {
+            if (e.Key == Key.R)
+            {
+                if (tab.ReconnectCommand.CanExecute(null))
+                    tab.ReconnectCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.C)
+            {
+                if (tab.RequestCloseCommand.CanExecute(null))
+                    tab.RequestCloseCommand.Execute(null);
+                e.Handled = true;
+            }
         }
     }
 
@@ -530,7 +569,8 @@ public partial class MainWindow : Window
         {
             try
             {
-                if (ViewModel.SftpSidebar == null) return;
+                if (ViewModel.SftpSidebar == null)
+                    return;
                 await ViewModel.SftpSidebar.DownloadAndOpenAsync(node);
             }
             catch (Exception ex)
@@ -560,7 +600,8 @@ public partial class MainWindow : Window
         if (GetSftpNodeFromMenuItem(sender) is { } node)
         {
             var confirmed = await ShowConfirmAsync("Confirm Delete", $"Delete '{node.Name}'?");
-            if (!confirmed) return;
+            if (!confirmed)
+                return;
 
             try
             {
@@ -579,7 +620,8 @@ public partial class MainWindow : Window
         {
             var newName = await ShowInputAsync("Rename", $"Enter new name for '{node.Name}':", node.Name);
 
-            if (string.IsNullOrWhiteSpace(newName) || newName == node.Name) return;
+            if (string.IsNullOrWhiteSpace(newName) || newName == node.Name)
+                return;
 
             try
             {
@@ -599,7 +641,8 @@ public partial class MainWindow : Window
             parentNode = null;
 
         var folderName = await ShowInputAsync("New Folder", "Enter folder name:", "New Folder");
-        if (string.IsNullOrWhiteSpace(folderName)) return;
+        if (string.IsNullOrWhiteSpace(folderName))
+            return;
 
         try
         {
@@ -629,18 +672,22 @@ public partial class MainWindow : Window
     private async void SftpTreeView_Drop(object? sender, DragEventArgs e)
     {
 #pragma warning disable CS0618 // Using Data for compatibility; DataTransfer API migration pending
-        if (!e.Data.Contains(DataFormats.Files)) return;
-        if (!ViewModel.SftpSidebar.IsConnected) return;
+        if (!e.Data.Contains(DataFormats.Files))
+            return;
+        if (!ViewModel.SftpSidebar.IsConnected)
+            return;
 
         var storageItems = e.Data.GetFiles();
 #pragma warning restore CS0618
-        if (storageItems == null) return;
+        if (storageItems == null)
+            return;
 
         var files = storageItems
             .Select(item => item.Path.LocalPath)
             .Where(path => !string.IsNullOrEmpty(path))
             .ToArray();
-        if (files.Length == 0) return;
+        if (files.Length == 0)
+            return;
 
         string targetPath = ViewModel.SftpSidebar.CurrentPath ?? "/";
 
@@ -676,7 +723,8 @@ public partial class MainWindow : Window
             AllowMultiple = true
         });
 
-        if (storageFiles.Count == 0) return;
+        if (storageFiles.Count == 0)
+            return;
 
         var filePaths = storageFiles.Select(f => f.Path.LocalPath).ToArray();
 
@@ -698,13 +746,86 @@ public partial class MainWindow : Window
         return null;
     }
 
+    private void SftpNode_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(null).Properties.IsLeftButtonPressed
+            && sender is StackPanel { DataContext: SftpTreeNode { IsDirectory: false } node })
+        {
+            _sftpDragStart = e.GetPosition(null);
+            _sftpDragPending = true;
+            _sftpDragNode = node;
+        }
+        else
+        {
+            _sftpDragPending = false;
+            _sftpDragNode = null;
+        }
+    }
+
+    private async void SftpNode_PointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (!_sftpDragPending || _sftpDragNode == null)
+            return;
+
+        var pos = e.GetPosition(null);
+        var delta = pos - _sftpDragStart;
+        if (Math.Abs(delta.X) < 8 && Math.Abs(delta.Y) < 8)
+            return;
+
+        _sftpDragPending = false;
+        var node = _sftpDragNode;
+        _sftpDragNode = null;
+
+        if (node.IsDirectory)
+            return;
+
+        var sftpService = ViewModel.SelectedTab?.SftpService;
+        if (sftpService == null || !sftpService.IsConnected)
+            return;
+
+        var tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "NetSterm_drop");
+        System.IO.Directory.CreateDirectory(tempDir);
+        var localPath = System.IO.Path.Combine(tempDir, node.Name);
+
+        try
+        {
+            await sftpService.DownloadFileAsync(node.FullPath, localPath, _ => { }, System.Threading.CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "SFTP drag-download failed for {Path}", node.FullPath);
+            return;
+        }
+
+#pragma warning disable CS0618 // Using legacy DragDrop API for compatibility
+        var dataObject = new DataObject();
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel?.StorageProvider != null)
+        {
+            var uri = new Uri(localPath);
+            var file = await topLevel.StorageProvider.TryGetFileFromPathAsync(uri);
+            if (file != null)
+            {
+                dataObject.Set(DataFormats.Files, new[] { file });
+            }
+        }
+
+        if (dataObject.Contains(DataFormats.Files))
+        {
+            await DragDrop.DoDragDrop(e, dataObject, DragDropEffects.Copy);
+        }
+#pragma warning restore CS0618
+    }
+
     // ===== Session Tree Drag-and-Drop =====
 
 #pragma warning disable CS0618 // Using legacy DragDrop API for compatibility
     private async void SessionTreeItem_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (sender is not Control { DataContext: SessionTreeItem item } control) return;
-        if (!e.GetCurrentPoint(control).Properties.IsLeftButtonPressed) return;
+        if (sender is not Control { DataContext: SessionTreeItem item } control)
+            return;
+        if (!e.GetCurrentPoint(control).Properties.IsLeftButtonPressed)
+            return;
 
         var dragData = new DataObject();
         dragData.Set("SessionTreeItem", item);
@@ -746,14 +867,18 @@ public partial class MainWindow : Window
     private void SessionTree_Drop(object? sender, DragEventArgs e)
     {
         ClearDragOverHighlight(ref _currentSessionDragOverItem);
-        if (!e.Data.Contains("SessionTreeItem")) return;
+        if (!e.Data.Contains("SessionTreeItem"))
+            return;
         var draggedItem = e.Data.Get("SessionTreeItem") as SessionTreeItem;
-        if (draggedItem == null) return;
+        if (draggedItem == null)
+            return;
 
         var targetItem = FindTargetTreeItem<SessionTreeItem>(e);
 
-        if (targetItem == draggedItem) return;
-        if (draggedItem.IsFolder && IsSessionDescendant(draggedItem, targetItem)) return;
+        if (targetItem == draggedItem)
+            return;
+        if (draggedItem.IsFolder && IsSessionDescendant(draggedItem, targetItem))
+            return;
 
         string? newParentFolderId = null;
         if (targetItem != null)
@@ -772,8 +897,10 @@ public partial class MainWindow : Window
 
     private async void SnippetTreeItem_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (sender is not Control { DataContext: SnippetTreeItem item } control) return;
-        if (!e.GetCurrentPoint(control).Properties.IsLeftButtonPressed) return;
+        if (sender is not Control { DataContext: SnippetTreeItem item } control)
+            return;
+        if (!e.GetCurrentPoint(control).Properties.IsLeftButtonPressed)
+            return;
 
         var dragData = new DataObject();
         dragData.Set("SnippetTreeItem", item);
@@ -815,14 +942,18 @@ public partial class MainWindow : Window
     private void SnippetTree_Drop(object? sender, DragEventArgs e)
     {
         ClearDragOverHighlight(ref _currentSnippetDragOverItem);
-        if (!e.Data.Contains("SnippetTreeItem")) return;
+        if (!e.Data.Contains("SnippetTreeItem"))
+            return;
         var draggedItem = e.Data.Get("SnippetTreeItem") as SnippetTreeItem;
-        if (draggedItem == null) return;
+        if (draggedItem == null)
+            return;
 
         var targetItem = FindTargetTreeItem<SnippetTreeItem>(e);
 
-        if (targetItem == draggedItem) return;
-        if (draggedItem.IsFolder && IsSnippetDescendant(draggedItem, targetItem)) return;
+        if (targetItem == draggedItem)
+            return;
+        if (draggedItem.IsFolder && IsSnippetDescendant(draggedItem, targetItem))
+            return;
 
         string? newParentFolderId = null;
         if (targetItem != null)
@@ -862,7 +993,8 @@ public partial class MainWindow : Window
 
     private static T? FindTargetTreeItem<T>(DragEventArgs e) where T : class
     {
-        if (e.Source is not Control source) return null;
+        if (e.Source is not Control source)
+            return null;
 
         var current = source as Visual;
         while (current != null)
@@ -876,22 +1008,28 @@ public partial class MainWindow : Window
 
     private static bool IsSessionDescendant(SessionTreeItem parent, SessionTreeItem? target)
     {
-        if (target == null) return false;
+        if (target == null)
+            return false;
         foreach (var child in parent.Children)
         {
-            if (child == target) return true;
-            if (IsSessionDescendant(child, target)) return true;
+            if (child == target)
+                return true;
+            if (IsSessionDescendant(child, target))
+                return true;
         }
         return false;
     }
 
     private static bool IsSnippetDescendant(SnippetTreeItem parent, SnippetTreeItem? target)
     {
-        if (target == null) return false;
+        if (target == null)
+            return false;
         foreach (var child in parent.Children)
         {
-            if (child == target) return true;
-            if (IsSnippetDescendant(child, target)) return true;
+            if (child == target)
+                return true;
+            if (IsSnippetDescendant(child, target))
+                return true;
         }
         return false;
     }
@@ -1010,7 +1148,8 @@ public partial class MainWindow : Window
 
     private async void DeleteSnippetTree_Click(object? sender, RoutedEventArgs e)
     {
-        if (GetSnippetTreeItemFromMenuItem(sender) is not { } item) return;
+        if (GetSnippetTreeItemFromMenuItem(sender) is not { } item)
+            return;
 
         var confirmed = await ShowConfirmAsync("Confirm Delete", $"Delete '{item.Name}'?");
         if (confirmed)
@@ -1019,7 +1158,8 @@ public partial class MainWindow : Window
 
     private async void SnippetTreeView_KeyDown(object? sender, KeyEventArgs e)
     {
-        if (SnippetTreeView.SelectedItem is not SnippetTreeItem item) return;
+        if (SnippetTreeView.SelectedItem is not SnippetTreeItem item)
+            return;
 
         if (e.Key == Key.F2)
         {
@@ -1073,7 +1213,8 @@ public partial class MainWindow : Window
 
     private void SnippetFolderTextBox_KeyDown(object? sender, KeyEventArgs e)
     {
-        if (sender is not TextBox { DataContext: SnippetTreeItem item } tb) return;
+        if (sender is not TextBox { DataContext: SnippetTreeItem item } tb)
+            return;
 
         if (e.Key == Key.Enter)
         {

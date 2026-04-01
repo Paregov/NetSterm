@@ -7,10 +7,10 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Serilog;
-using WebViewCore.Events;
 using NetSterm.Services;
 using NetSterm.ViewModels;
+using Serilog;
+using WebViewCore.Events;
 
 namespace NetSterm.Views;
 
@@ -142,7 +142,8 @@ public partial class TerminalControl : UserControl
         try
         {
             var json = e.Message;
-            if (json == null) return;
+            if (json == null)
+                return;
 
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
@@ -186,7 +187,8 @@ public partial class TerminalControl : UserControl
 
     private void OnSshDataReceived(string data)
     {
-        if (!_isWebViewReady) return;
+        if (!_isWebViewReady)
+            return;
 
         Dispatcher.UIThread.Post(() =>
         {
@@ -269,7 +271,8 @@ public partial class TerminalControl : UserControl
 
     private void WriteToTerminal(string text)
     {
-        if (!_isWebViewReady) return;
+        if (!_isWebViewReady)
+            return;
 
         try
         {
@@ -389,13 +392,15 @@ public partial class TerminalControl : UserControl
 
     private async void PreviousMatchButton_Click(object? sender, RoutedEventArgs e)
     {
-        try { await SearchPreviousAsync(); }
+        try
+        { await SearchPreviousAsync(); }
         catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Previous match error: {ex.Message}"); }
     }
 
     private async void NextMatchButton_Click(object? sender, RoutedEventArgs e)
     {
-        try { await SearchNextAsync(); }
+        try
+        { await SearchNextAsync(); }
         catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Next match error: {ex.Message}"); }
     }
 

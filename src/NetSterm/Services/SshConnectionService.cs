@@ -1,7 +1,7 @@
+using NetSterm.Models;
 using Renci.SshNet;
 using Renci.SshNet.Common;
 using Serilog;
-using NetSterm.Models;
 
 namespace NetSterm.Services;
 
@@ -173,7 +173,8 @@ public class SshConnectionService : ISshConnectionService
         _readCts?.Cancel();
 
         // Unblock any waiting auth prompt so the SSH thread does not hang
-        try { _authResponseWait?.Set(); }
+        try
+        { _authResponseWait?.Set(); }
         catch (ObjectDisposedException) { }
 
         if (_shellStream != null)

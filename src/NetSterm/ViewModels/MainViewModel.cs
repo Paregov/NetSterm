@@ -1,7 +1,7 @@
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using System.Collections.ObjectModel;
 using NetSterm.Models;
 using NetSterm.Services;
 
@@ -119,7 +119,8 @@ public partial class MainViewModel : ObservableObject
 
     private void OnTerminalCwdChanged()
     {
-        if (SelectedTab == null || !SftpSidebar.IsConnected) return;
+        if (SelectedTab == null || !SftpSidebar.IsConnected)
+            return;
         var path = SelectedTab.CurrentRemoteDirectory;
         if (!string.IsNullOrEmpty(path) && path != SftpSidebar.CurrentPath)
         {
@@ -217,7 +218,8 @@ public partial class MainViewModel : ObservableObject
 
     private static void RestoreExpandedIds(IEnumerable<SessionTreeItem> items, HashSet<string> ids)
     {
-        if (ids.Count == 0) return;
+        if (ids.Count == 0)
+            return;
         foreach (var item in items)
         {
             if (item.IsFolder)
@@ -229,7 +231,8 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task QuickConnect()
     {
-        if (string.IsNullOrWhiteSpace(QuickHost)) return;
+        if (string.IsNullOrWhiteSpace(QuickHost))
+            return;
 
         var info = new ConnectionInfo
         {
@@ -246,7 +249,8 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task ConnectSession(SessionTreeItem? item)
     {
-        if (item?.ConnectionInfo == null) return;
+        if (item?.ConnectionInfo == null)
+            return;
         await OpenSession(item.ConnectionInfo);
     }
 
@@ -272,7 +276,8 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void CloseTab(SessionTabViewModel? tab)
     {
-        if (tab == null) return;
+        if (tab == null)
+            return;
         tab.Disconnect();
         tab.Dispose();
         Tabs.Remove(tab);
@@ -286,7 +291,8 @@ public partial class MainViewModel : ObservableObject
 
     public void CloseOtherTabs(SessionTabViewModel tab)
     {
-        if (tab == null || !Tabs.Contains(tab)) return;
+        if (tab == null || !Tabs.Contains(tab))
+            return;
         var others = Tabs.Where(t => t != tab).ToList();
         foreach (var t in others)
         {
@@ -315,9 +321,11 @@ public partial class MainViewModel : ObservableObject
 
     public void CloseTabsToRight(SessionTabViewModel tab)
     {
-        if (tab == null) return;
+        if (tab == null)
+            return;
         var index = Tabs.IndexOf(tab);
-        if (index < 0) return;
+        if (index < 0)
+            return;
 
         var toClose = Tabs.Skip(index + 1).ToList();
         foreach (var t in toClose)
@@ -333,7 +341,8 @@ public partial class MainViewModel : ObservableObject
 
     public void DuplicateTab(SessionTabViewModel tab)
     {
-        if (tab == null) return;
+        if (tab == null)
+            return;
         var newTab = new SessionTabViewModel(tab.ConnectionInfo);
         Tabs.Add(newTab);
         SelectedTab = newTab;
@@ -365,7 +374,8 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void DeleteItem(SessionTreeItem? item)
     {
-        if (item == null) return;
+        if (item == null)
+            return;
         if (item.IsFolder)
             _storage.DeleteFolder(item.Id);
         else
@@ -378,8 +388,10 @@ public partial class MainViewModel : ObservableObject
         if (item.IsFolder)
         {
             var folder = _storage.Store.Folders.FirstOrDefault(f => f.Id == item.Id);
-            if (folder == null) return;
-            if (folder.ParentFolderId == newParentFolderId) return;
+            if (folder == null)
+                return;
+            if (folder.ParentFolderId == newParentFolderId)
+                return;
             folder.ParentFolderId = newParentFolderId;
             ReassignSortOrders(newParentFolderId);
             _storage.Save();
@@ -387,8 +399,10 @@ public partial class MainViewModel : ObservableObject
         else if (item.ConnectionInfo != null)
         {
             var conn = _storage.Store.Connections.FirstOrDefault(c => c.Id == item.ConnectionInfo.Id);
-            if (conn == null) return;
-            if (conn.FolderId == newParentFolderId) return;
+            if (conn == null)
+                return;
+            if (conn.FolderId == newParentFolderId)
+                return;
             conn.FolderId = newParentFolderId;
             ReassignSortOrders(newParentFolderId);
             _storage.Save();
@@ -421,7 +435,8 @@ public partial class MainViewModel : ObservableObject
         LoadSessionTree();
 
         var newItem = FindTreeItem(folder.Id);
-        if (newItem == null) return;
+        if (newItem == null)
+            return;
 
         newItem.IsEditing = true;
         newItem.IsSelected = true;
@@ -429,14 +444,16 @@ public partial class MainViewModel : ObservableObject
         if (parentFolderId != null)
         {
             var parent = FindTreeItem(parentFolderId);
-            if (parent != null) parent.IsExpanded = true;
+            if (parent != null)
+                parent.IsExpanded = true;
         }
     }
 
     public bool CommitRename(SessionTreeItem item)
     {
         var newName = item.Name.Trim();
-        if (string.IsNullOrWhiteSpace(newName)) return false;
+        if (string.IsNullOrWhiteSpace(newName))
+            return false;
 
         string? folderId;
         string? excludeId;
@@ -444,7 +461,8 @@ public partial class MainViewModel : ObservableObject
         if (item.IsFolder)
         {
             var folder = _storage.Store.Folders.FirstOrDefault(f => f.Id == item.Id);
-            if (folder == null) return false;
+            if (folder == null)
+                return false;
             folderId = folder.ParentFolderId;
             excludeId = folder.Id;
         }
@@ -467,7 +485,8 @@ public partial class MainViewModel : ObservableObject
         else if (item.ConnectionInfo != null)
         {
             var conn = _storage.Store.Connections.FirstOrDefault(c => c.Id == item.ConnectionInfo.Id);
-            if (conn != null) conn.Name = newName;
+            if (conn != null)
+                conn.Name = newName;
         }
 
         _storage.Save();
@@ -521,9 +540,11 @@ public partial class MainViewModel : ObservableObject
     {
         foreach (var item in items)
         {
-            if (item.Id == id) return item;
+            if (item.Id == id)
+                return item;
             var found = FindInCollection(item.Children, id);
-            if (found != null) return found;
+            if (found != null)
+                return found;
         }
         return null;
     }

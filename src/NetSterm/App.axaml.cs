@@ -3,8 +3,8 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using AvaloniaWebView;
-using Serilog;
 using NetSterm.Services;
+using Serilog;
 
 namespace NetSterm;
 

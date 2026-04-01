@@ -13,7 +13,8 @@ public class EnumValuesConverter : IValueConverter
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is null) return Array.Empty<object>();
+        if (value is null)
+            return Array.Empty<object>();
         return Enum.GetValues(value.GetType());
     }
 

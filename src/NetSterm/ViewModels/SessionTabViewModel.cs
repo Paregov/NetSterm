@@ -1,8 +1,9 @@
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Serilog;
+using CommunityToolkit.Mvvm.Input;
 using NetSterm.Models;
 using NetSterm.Services;
+using Serilog;
 
 namespace NetSterm.ViewModels;
 
@@ -15,12 +16,16 @@ public partial class SessionTabViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _statusText = "Disconnected";
     [ObservableProperty] private string _currentRemoteDirectory = "/";
 
+    public bool IsDisconnected => !IsConnected && !IsConnecting;
+
     public ConnectionInfo ConnectionInfo { get; }
     public SshConnectionService SshService { get; } = new();
     public SftpService SftpService { get; } = new();
     public SftpBrowserViewModel SftpBrowserViewModel { get; } = new();
     public string TabId { get; } = Guid.NewGuid().ToString();
     public TaskCompletionSource<bool> TerminalReady { get; } = new();
+
+    public event Action? CloseRequested;
 
     public SessionTabViewModel(ConnectionInfo info)
     {
@@ -30,13 +35,39 @@ public partial class SessionTabViewModel : ObservableObject, IDisposable
         SshService.CurrentDirectoryChanged += OnCurrentDirectoryChanged;
     }
 
+    partial void OnIsConnectedChanged(bool value) => OnPropertyChanged(nameof(IsDisconnected));
+    partial void OnIsConnectingChanged(bool value) => OnPropertyChanged(nameof(IsDisconnected));
+
     private void OnDisconnected()
     {
         Dispatcher.UIThread.Post(() =>
         {
             IsConnected = false;
             StatusText = "Connection lost";
+            OnPropertyChanged(nameof(IsDisconnected));
         });
+    }
+
+    [RelayCommand]
+    private void RequestClose() => CloseRequested?.Invoke();
+
+    [RelayCommand]
+    private async Task ReconnectAsync()
+    {
+        Log.Information("Reconnecting to {Host}:{Port}", ConnectionInfo.Host, ConnectionInfo.Port);
+        StatusText = "Reconnecting...";
+
+        // Disconnect existing connections (this unsubscribes events)
+        SshService.Disconnect();
+        SftpService.Disconnect();
+        IsConnected = false;
+
+        // Re-subscribe events since Disconnect() removed them
+        SshService.Disconnected += OnDisconnected;
+        SshService.CurrentDirectoryChanged += OnCurrentDirectoryChanged;
+
+        // Reconnect - password will be prompted if needed via keyboard-interactive
+        await ConnectAsync();
     }
 
     private void OnCurrentDirectoryChanged(string path)

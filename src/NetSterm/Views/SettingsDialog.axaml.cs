@@ -27,10 +27,14 @@ public partial class SettingsDialog : Window
     private async void MasterPasswordToggle_PropertyChanged(
         object? sender, Avalonia.AvaloniaPropertyChangedEventArgs e)
     {
-        if (e.Property != ToggleSwitch.IsCheckedProperty) return;
-        if (_suppressToggle || !_initialized) return;
-        if (DataContext is not SettingsDialogViewModel vm) return;
-        if (sender is not ToggleSwitch toggle) return;
+        if (e.Property != ToggleSwitch.IsCheckedProperty)
+            return;
+        if (_suppressToggle || !_initialized)
+            return;
+        if (DataContext is not SettingsDialogViewModel vm)
+            return;
+        if (sender is not ToggleSwitch toggle)
+            return;
 
         if (toggle.IsChecked == true)
         {
@@ -74,7 +78,8 @@ public partial class SettingsDialog : Window
     {
         var dialog = new SetMasterPasswordDialog(PasswordDialogMode.Change);
         var result = await dialog.ShowDialog<bool>(this);
-        if (!result) return;
+        if (!result)
+            return;
 
         if (MasterPasswordService.ChangePassword(dialog.CurrentPassword, dialog.NewPassword))
         {

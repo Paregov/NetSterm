@@ -32,7 +32,8 @@ public partial class SftpSidebarViewModel : ObservableObject
         _sftpService = tab.SftpService;
         IsConnected = true;
         HostLabel = tab.ConnectionInfo.Host;
-        try { await LoadDirectoryAsync(_sftpService.CurrentDirectory); }
+        try
+        { await LoadDirectoryAsync(_sftpService.CurrentDirectory); }
         catch (Exception ex)
         {
             Debug.WriteLine($"SFTP sidebar load error: {ex.Message}");
@@ -49,7 +50,8 @@ public partial class SftpSidebarViewModel : ObservableObject
 
     public async Task LoadDirectoryAsync(string? path = null)
     {
-        if (_sftpService == null || !_sftpService.IsConnected) return;
+        if (_sftpService == null || !_sftpService.IsConnected)
+            return;
 
         var targetPath = path ?? _sftpService.CurrentDirectory ?? "/";
         CurrentPath = targetPath;
@@ -81,7 +83,8 @@ public partial class SftpSidebarViewModel : ObservableObject
 
     public async Task LoadChildrenAsync(SftpTreeNode node)
     {
-        if (_sftpService == null || !node.IsDirectory || !node.HasDummyChild) return;
+        if (_sftpService == null || !node.IsDirectory || !node.HasDummyChild)
+            return;
 
         node.IsLoading = true;
         try
@@ -121,7 +124,8 @@ public partial class SftpSidebarViewModel : ObservableObject
     [RelayCommand]
     private async Task NavigateUp()
     {
-        if (CurrentPath == "/") return;
+        if (CurrentPath == "/")
+            return;
         var parent = GetParentPath(CurrentPath);
         await LoadDirectoryAsync(parent);
     }
@@ -134,7 +138,8 @@ public partial class SftpSidebarViewModel : ObservableObject
 
     public async Task UploadFilesAsync(string[] localPaths, string remoteDirectory)
     {
-        if (_sftpService == null || !_sftpService.IsConnected) return;
+        if (_sftpService == null || !_sftpService.IsConnected)
+            return;
 
         IsLoading = true;
         try
@@ -166,7 +171,8 @@ public partial class SftpSidebarViewModel : ObservableObject
         var dirName = Path.GetFileName(localDirPath);
         var remoteDirPath = remoteParentDir.TrimEnd('/') + "/" + dirName;
 
-        try { await _sftpService!.CreateDirectoryAsync(remoteDirPath); }
+        try
+        { await _sftpService!.CreateDirectoryAsync(remoteDirPath); }
         catch { /* directory may already exist */ }
 
         foreach (var file in Directory.GetFiles(localDirPath))
@@ -184,7 +190,8 @@ public partial class SftpSidebarViewModel : ObservableObject
 
     public async Task DownloadAndOpenAsync(SftpTreeNode node)
     {
-        if (node.IsDirectory || _sftpService == null) return;
+        if (node.IsDirectory || _sftpService == null)
+            return;
 
         var tempDir = Path.Combine(Path.GetTempPath(), "NetSterm");
         Directory.CreateDirectory(tempDir);
@@ -197,7 +204,8 @@ public partial class SftpSidebarViewModel : ObservableObject
 
     public async Task DeleteNodeAsync(SftpTreeNode node)
     {
-        if (_sftpService == null) return;
+        if (_sftpService == null)
+            return;
 
         await _sftpService.DeleteAsync(node.FullPath);
         RemoveNodeFromTree(node);
@@ -205,7 +213,8 @@ public partial class SftpSidebarViewModel : ObservableObject
 
     public async Task RenameNodeAsync(SftpTreeNode node, string newName)
     {
-        if (_sftpService == null) return;
+        if (_sftpService == null)
+            return;
 
         var parentPath = GetParentPath(node.FullPath);
         var newPath = parentPath.TrimEnd('/') + "/" + newName;
@@ -217,7 +226,8 @@ public partial class SftpSidebarViewModel : ObservableObject
 
     public async Task CreateFolderAsync(SftpTreeNode? parentNode, string folderName)
     {
-        if (_sftpService == null) return;
+        if (_sftpService == null)
+            return;
 
         var parentPath = parentNode?.FullPath ?? CurrentPath;
         var fullPath = parentPath.TrimEnd('/') + "/" + folderName;
@@ -258,28 +268,33 @@ public partial class SftpSidebarViewModel : ObservableObject
     {
         if (sender is SftpTreeNode node)
         {
-            try { await LoadChildrenAsync(node); }
+            try
+            { await LoadChildrenAsync(node); }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"SFTP expand error: {ex.Message}"); }
         }
     }
 
     private void RemoveNodeFromTree(SftpTreeNode target)
     {
-        if (RootNodes.Remove(target)) return;
+        if (RootNodes.Remove(target))
+            return;
 
         foreach (var root in RootNodes)
         {
-            if (RemoveFromChildren(root, target)) return;
+            if (RemoveFromChildren(root, target))
+                return;
         }
     }
 
     private static bool RemoveFromChildren(SftpTreeNode parent, SftpTreeNode target)
     {
-        if (parent.Children.Remove(target)) return true;
+        if (parent.Children.Remove(target))
+            return true;
 
         foreach (var child in parent.Children)
         {
-            if (RemoveFromChildren(child, target)) return true;
+            if (RemoveFromChildren(child, target))
+                return true;
         }
 
         return false;
