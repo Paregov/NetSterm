@@ -17,13 +17,13 @@ A modern cross-platform SSH terminal application inspired by MobaXterm, built wi
 
 ## Tech Stack
 
-| Component | Library |
-|-----------|---------|
-| SSH/SFTP | [SSH.NET](https://github.com/sshnet/SSH.NET) |
-| Terminal | [xterm.js](https://xtermjs.org/) via WebView |
-| UI Framework | [Avalonia](https://avaloniaui.net/) with Fluent theme |
-| MVVM | [CommunityToolkit.Mvvm](https://learn.microsoft.com/en-us/dotnet/communitytoolkit/mvvm/) |
-| Icons | [Material.Icons.Avalonia](https://github.com/SKProCH/Material.Icons) |
+| Component    | Library                                                                                  |
+| ------------ | ---------------------------------------------------------------------------------------- |
+| SSH/SFTP     | [SSH.NET](https://github.com/sshnet/SSH.NET)                                             |
+| Terminal     | [xterm.js](https://xtermjs.org/) via WebView                                             |
+| UI Framework | [Avalonia](https://avaloniaui.net/) with Fluent theme                                    |
+| MVVM         | [CommunityToolkit.Mvvm](https://learn.microsoft.com/en-us/dotnet/communitytoolkit/mvvm/) |
+| Icons        | [Material.Icons.Avalonia](https://github.com/SKProCH/Material.Icons)                     |
 
 ## Getting Started
 
@@ -65,3 +65,19 @@ For reporting vulnerabilities, see [SECURITY.md](SECURITY.md).
 ## License
 
 MIT — see [LICENSE](LICENSE) for details.
+
+
+
+## Screenshots
+
+Sessions
+
+![netsterm_main_sessions.png](./docs/images/netsterm_main_sessions.png)
+
+Snippets
+
+![netsterm_main_snippets.png](./docs/images/netsterm_main_snippets.png)
+
+SFTP
+
+![netsterm_main_sftp.png](./docs/images/netsterm_main_sftp.png)
