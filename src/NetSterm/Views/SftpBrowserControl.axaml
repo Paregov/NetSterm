@@ -238,6 +238,16 @@
                     </StackPanel>
                 </Button>
 
+                <Button Command="{Binding ClearCompletedTransfersCommand}"
+                        Height="30" Padding="12,0" Margin="0,0,8,0"
+                        IsEnabled="{Binding HasCompletedTransfers}"
+                        ToolTip.Tip="Clear completed and failed transfers">
+                    <StackPanel Orientation="Horizontal">
+                        <mi:MaterialIcon Kind="CloseCircleOutline" Width="14" Height="14" VerticalAlignment="Center"/>
+                        <TextBlock Text="Clear" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                    </StackPanel>
+                </Button>
+
                 <!-- Busy indicator -->
                 <ProgressBar IsIndeterminate="True"
                              IsVisible="{Binding IsBusy}"

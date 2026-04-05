@@ -64,7 +64,8 @@ public partial class SftpBrowserControl : UserControl
     private async void CreateFolderButton_Click(object? sender, RoutedEventArgs e)
     {
         var parent = TopLevel.GetTopLevel(this) as Window;
-        if (parent == null) return;
+        if (parent == null)
+            return;
 
         var textBox = new TextBox { Margin = new Thickness(0, 0, 0, 12) };
 

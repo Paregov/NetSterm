@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
+using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Avalonia.Controls;
 using NetSterm.Models;
 using NetSterm.Services;
 
@@ -132,7 +132,8 @@ public partial class ConnectionDialogViewModel : ObservableValidator
 
             if (!string.IsNullOrEmpty(existing.EncryptedPassword))
             {
-                try { Password = ConnectionStorageService.DecryptPassword(existing.EncryptedPassword); }
+                try
+                { Password = ConnectionStorageService.DecryptPassword(existing.EncryptedPassword); }
                 catch { Password = ""; }
             }
 
@@ -178,7 +179,8 @@ public partial class ConnectionDialogViewModel : ObservableValidator
     private void Save(Window window)
     {
         ValidateAllProperties();
-        if (HasErrors) return;
+        if (HasErrors)
+            return;
 
         Result = new ConnectionInfo
         {

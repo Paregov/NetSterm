@@ -792,13 +792,54 @@
                             <DataTemplate>
                                 <Grid IsVisible="{Binding IsSelected}">
                                     <Grid.RowDefinitions>
-                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="*" MinHeight="100"/>
                                         <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="4" MinHeight="0"/>
+                                        <RowDefinition Height="200" MinHeight="80"/>
                                     </Grid.RowDefinitions>
 
-                                    <!-- Terminal Control -->
-                                    <views:TerminalControl Grid.Row="0" />
+                                    <!-- Terminal Control + disconnect overlay -->
+                                    <Panel Grid.Row="0">
+                                        <views:TerminalControl />
+                                        <!-- Disconnect overlay: shown when disconnected (not connecting) -->
+                                        <Border Background="#CC1E1E1E"
+                                                IsVisible="{Binding IsDisconnected}"
+                                                HorizontalAlignment="Stretch"
+                                                VerticalAlignment="Stretch">
+                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                                                <mi:MaterialIcon Kind="LanDisconnect" Width="48" Height="48" 
+                                                                 Foreground="#E05555" HorizontalAlignment="Center"/>
+                                                <TextBlock Text="{Binding StatusText}" 
+                                                           FontSize="16" Foreground="#CCCCCC"
+                                                           HorizontalAlignment="Center"/>
+                                                <TextBlock Text="Session disconnected" 
+                                                           FontSize="12" Foreground="#888888"
+                                                           HorizontalAlignment="Center"/>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12" Margin="0,8,0,0">
+                                                    <Button Command="{Binding ReconnectCommand}"
+                                                            Padding="16,8"
+                                                            Background="#2B5278"
+                                                            Foreground="White"
+                                                            CornerRadius="4">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <mi:MaterialIcon Kind="Restart" Width="16" Height="16"/>
+                                                            <TextBlock Text="Reconnect (R)"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <Button Command="{Binding RequestCloseCommand}"
+                                                            Padding="16,8"
+                                                            Background="#5C3030"
+                                                            Foreground="White"
+                                                            CornerRadius="4">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <mi:MaterialIcon Kind="Close" Width="16" Height="16"/>
+                                                            <TextBlock Text="Close Tab (C)"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
+                                    </Panel>
 
                                     <!-- SFTP Toggle bar -->
                                     <Border Grid.Row="1"
@@ -825,10 +866,18 @@
                                         </DockPanel>
                                     </Border>
 
-                                    <!-- SFTP Browser (collapsible) -->
-                                    <views:SftpBrowserControl Grid.Row="2"
+                                    <!-- Resize splitter (only visible when SFTP is open) -->
+                                    <GridSplitter Grid.Row="2"
+                                                  ResizeDirection="Rows"
+                                                  Height="4"
+                                                  HorizontalAlignment="Stretch"
+                                                  Background="{StaticResource SidebarBorder}"
+                                                  IsVisible="{Binding #SftpToggle.IsChecked}"
+                                                  />
+
+                                    <!-- SFTP Browser (collapsible, resizable) -->
+                                    <views:SftpBrowserControl Grid.Row="3"
                                         DataContext="{Binding SftpBrowserViewModel}"
-                                        Height="250"
                                         IsVisible="{Binding #SftpToggle.IsChecked}"/>
 
                                 </Grid>

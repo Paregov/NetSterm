@@ -86,7 +86,8 @@ public partial class SnippetsSidebarViewModel : ObservableObject
 
     private static void RestoreExpandedIds(IEnumerable<SnippetTreeItem> items, HashSet<string> ids)
     {
-        if (ids.Count == 0) return;
+        if (ids.Count == 0)
+            return;
         foreach (var item in items)
         {
             if (item.IsFolder)
@@ -123,7 +124,8 @@ public partial class SnippetsSidebarViewModel : ObservableObject
         LoadTree();
 
         var newItem = FindTreeItem(folder.Id);
-        if (newItem == null) return;
+        if (newItem == null)
+            return;
 
         newItem.IsEditing = true;
         newItem.IsSelected = true;
@@ -131,14 +133,16 @@ public partial class SnippetsSidebarViewModel : ObservableObject
         if (parentFolderId != null)
         {
             var parent = FindTreeItem(parentFolderId);
-            if (parent != null) parent.IsExpanded = true;
+            if (parent != null)
+                parent.IsExpanded = true;
         }
     }
 
     public bool CommitRename(SnippetTreeItem item)
     {
         var newName = item.Name.Trim();
-        if (string.IsNullOrWhiteSpace(newName)) return false;
+        if (string.IsNullOrWhiteSpace(newName))
+            return false;
 
         string? folderId;
         string? excludeId;
@@ -146,7 +150,8 @@ public partial class SnippetsSidebarViewModel : ObservableObject
         if (item.IsFolder)
         {
             var folder = _storage.Store.Folders.FirstOrDefault(f => f.Id == item.Id);
-            if (folder == null) return false;
+            if (folder == null)
+                return false;
             folderId = folder.ParentFolderId;
             excludeId = folder.Id;
         }
@@ -169,7 +174,8 @@ public partial class SnippetsSidebarViewModel : ObservableObject
         else if (item.Snippet != null)
         {
             var snippet = _storage.Store.Snippets.FirstOrDefault(s => s.Id == item.Snippet.Id);
-            if (snippet != null) snippet.Name = newName;
+            if (snippet != null)
+                snippet.Name = newName;
         }
 
         _storage.Save();
@@ -195,8 +201,10 @@ public partial class SnippetsSidebarViewModel : ObservableObject
         if (item.IsFolder)
         {
             var folder = _storage.Store.Folders.FirstOrDefault(f => f.Id == item.Id);
-            if (folder == null) return;
-            if (folder.ParentFolderId == newParentFolderId) return;
+            if (folder == null)
+                return;
+            if (folder.ParentFolderId == newParentFolderId)
+                return;
             folder.ParentFolderId = newParentFolderId;
             ReassignSortOrders(newParentFolderId);
             _storage.Save();
@@ -204,8 +212,10 @@ public partial class SnippetsSidebarViewModel : ObservableObject
         else if (item.Snippet != null)
         {
             var snippet = _storage.Store.Snippets.FirstOrDefault(s => s.Id == item.Snippet.Id);
-            if (snippet == null) return;
-            if (snippet.FolderId == newParentFolderId) return;
+            if (snippet == null)
+                return;
+            if (snippet.FolderId == newParentFolderId)
+                return;
             snippet.FolderId = newParentFolderId;
             ReassignSortOrders(newParentFolderId);
             _storage.Save();
@@ -277,9 +287,11 @@ public partial class SnippetsSidebarViewModel : ObservableObject
     {
         foreach (var item in items)
         {
-            if (item.Id == id) return item;
+            if (item.Id == id)
+                return item;
             var found = FindInCollection(item.Children, id);
-            if (found != null) return found;
+            if (found != null)
+                return found;
         }
         return null;
     }
